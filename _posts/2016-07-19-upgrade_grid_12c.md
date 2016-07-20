@@ -3,9 +3,6 @@ layout: post
 title: Upgrade grid 12.1.0.1 to 12.1.0.2
 published: true
 ---
-
-# Upgrade grid from 12.1.0.1 to 12.1.0.2
-
 I need to upgrade a RAC production set-up from grid 12.1.0.1 to 12.1.0.2. Since this is the first time I do that, I have first set-up a rehearsal environment on VMWare (to be documented in another post).
 
 The upgrade went very smoothly. It consists of:
