@@ -42,7 +42,7 @@ on node 1, unzip the soft in a staging directory
 ```
 mkdir /u01/staging/grid12102 (owned by user grid)
 cd /u01/staging/grid12102
-unzip linuxamd64_12102_grid_1of2.zip and 
+unzip linuxamd64_12102_grid_1of2.zip 
 unzip linuxamd64_12102_grid_2of2.zip
 ```
 
