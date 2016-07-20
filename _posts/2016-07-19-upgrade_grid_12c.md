@@ -30,19 +30,21 @@ DEVRACDB_MN:/u01/app/oracle/product/12.1.0/dbhome_1:N:          # line added by 
 ```
 
 On both nodes, create the new home
+
 ```
 sudo mkdir -p /u01/app/12.1.0.2/grid
 sudo chown root:oinstall /u01/app/12.1.0.2
 sudo chown grid:oinstall /u01/app/12.1.0.2/grid
 ```
+
 on node 1, unzip the soft in a staging directory
+
 ```
 mkdir /u01/staging/grid12102 (owned by user grid)
 cd /u01/staging/grid12102
 unzip linuxamd64_12102_grid_1of2.zip and 
 unzip linuxamd64_12102_grid_2of2.zip
 ```
-
 
 On node 1, run the cluvfy utility (downloaded from technet or metalink)
 
@@ -93,11 +95,9 @@ cd /u01/staging/grid12102/grid
 ./runInstaller
 ```
 
--choose the option : Upgrade Oracle grid infrastructure or Oracle ASM (it is selected by default)
-
--In software location, choose /u01/app/12.1.0.2/grid
-
--when prompted run the /u01/app/12.1.0.2/grid/orarootinstall.sh script on the first node and then on the second node (once finished on the first node). It takes time.
+- choose the option : Upgrade Oracle grid infrastructure or Oracle ASM (it is selected by default)
+- In software location, choose /u01/app/12.1.0.2/grid
+- when prompted run the /u01/app/12.1.0.2/grid/orarootinstall.sh script on the first node and then on the second node (once finished on the first node). It takes time.
 
 After the upgrade, check the active version, as root
 
