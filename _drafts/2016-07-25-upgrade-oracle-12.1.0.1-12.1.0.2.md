@@ -3,9 +3,11 @@ published: false
 ---
 ## A New Post
 
-I must upgrade a RAC production with a standby database (the standby is single-instance and non-ASM) from 12.1.0.1 to 12.1.0.2. It is a bit stupid because Oracle 12.2 is about to be released but I don't have the choice...
+I have a RAC production setup with a standby database (the standby is single-instance and non-ASM) and I must upgrade it from 12.1.0.1 to 12.1.0.2. I think this is a bit stupid because Oracle 12.2 is about to be released, but I don't have the choice to wait for 12.2.
 
-In order to do a rehearsal and learn the process I have set-up a RAC on VMWare ESX with a dataguard also on ESX. The grid infrastructure upgrade went smoothly (see previous blog post), now I'll document the database part.
+In those case it is important to do a rehearsal and to be able to learn the process, that's why I have set-up a RAC on VMWare ESX. To mirror the production set-up I also added a dataguard (also on ESX). 
+
+In the previous blog post I documented the grid infrastructure upgrade, which went smoothly. Now I'll document the database part.
 
 The process is the following
 
