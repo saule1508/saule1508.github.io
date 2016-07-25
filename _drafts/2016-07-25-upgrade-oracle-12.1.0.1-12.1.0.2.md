@@ -66,22 +66,59 @@ Note: before the grid upgrade, I downloaded, installed and run the same utility 
  ./bin/cluvfy stage -pre dbinst -upgrade -src_dbhome /u01/app/oracle/product/12.1.0/dbhome_1 -dest_dbhome /u01/app/oracle/product/12.1.0/dbhome_2  -dest_version 12.1.0.2.0
 ```
 
+**pre-upgrade**
+
+on the primary, copy preupgrd.sql and utluppkg.sql from the new home dbs/admin to a directory of your choice, in my case /home/oracle/upgrade12102. Then run preupgrd.sql as sysdba (from the old home). It will says something like 
+
+```
+ACTIONS REQUIRED:
+
+1. Review results of the pre-upgrade checks:
+ /u01/app/oracle/cfgtoollogs/DEVRACDB_MN/preupgrade/preupgrade.log
+
+2. Execute in the SOURCE environment BEFORE upgrade:
+ /u01/app/oracle/cfgtoollogs/DEVRACDB_MN/preupgrade/preupgrade_fixups.sql
+
+3. Execute in the NEW environment AFTER upgrade:
+ /u01/app/oracle/cfgtoollogs/DEVRACDB_MN/preupgrade/postupgrade_fixups.sql
+
+```
+
+and of course one must carefully review the log file, and execute the preupgrade fixup.
+
+
 **upgrade**
 
-once all pre-check are ok, we can do the actual update. The idea is to start the standby from the new home and put it in apply state, so that when the primary is being upgraded it will apply the dictionnary changes done on the primary by the upgrade assistant.
+once all pre-check are ok, we can do the actual update. The idea is to start the standby from the new home and put it in apply state, so that when the primary is being upgraded the changes done during the upgrade are propagated to the standby.
+
 
 on the standby - evs-rv-orarac03 -
 
-stop the apply and stop the transport using dgmgrl
+disable the broker configuration
 
 ```
-edit database 'DEVRACDB_MN' set state='TRANSPORT-OFF`;
-edit database 'DEVRACDB_DG' set state='APPLY-OFF';
+dgmgrl
+connect sys/evs123
+disable configuration;
+```
+
+disable the dg broker on both the primary and the dataguard
+
+```
+ALTER SYSTEM SET DG_BROKER_START=FALSE scope=both sid='*';
 ```
 
 stop the database and stop the listener, then install the files in the new home
 
 ```
+lsrnctl stop
+sqlplus /nolog <<EOF
+connect / as sysdba
+shutdown immediate;
+exit;
+EOF
+```
+
 cd /u01/app/oracle/product/12.1.0
 cp ./db_home1/dbs/spfileDEVRACDB3.ora ./db_home2/dbs/
 cp ./db_home1/dbs/orapwDEVRACDB3 ./db_home2/dbs
@@ -91,30 +128,70 @@ cp ./db_home1/network/admin/*.ora ./db_home2/network/admin/
 edit the listener.ora and change the oracle home
 edit /etc/oratab and change the oracle home
 
-switch to the new oracle home then start the database mount and start the listener. 
-
-disable flash back
+switch to the new oracle home then start the database mount and start the listener. Disable flash back
 
 ```
 sqlplus / as sysdba
+startup mount;
 alter database set flashback off;
 exit
-```
-
-Restart the transport and the apply using dgmgrl
 
 ```
-dgmgrl
-connect sys/...
-edit database 'DEVRACDB_MN' set state='TRANSPORT-ON';
-edit database 'DEVRACDB_DG' set state='APPLY-ON';
+lsnrctl start
 ```
-
-check the alert log of the dataguard
 
 on the primary - evs-rv-orarac01 -
 
 stop all dbms_scheduler jobs, comment out cron entries (i.e. backup)
+
+as application owner
+
+```
+sqlplus myuser/mypasswd
+set pages 0 lines 240 trimspool on
+spool dodisable.sql
+select q'[exec dbms_scheduler.disable(name=>']'||
+      job_name||
+      q'[', force=>true);]'
+from user_scheduler_jobs
+where state='ENABLED';
+```
+
+review then execute dodisable.sql
+
+```
+sqlplus myuser/mypasswd
+@dodisable.sql
+```
+
+purge the recycle bin
+
+```
+purge dba recycle;
+```
+
+turn off flashback
+
+```
+srvctl stop database -db DEVRACDB_MN
+srvctl start instance -db DEVRACDB_MN -instance DEVRACDB1 -startoption nomount
+```
+
+```
+sqlplus /nolog
+connect / as sysdba
+alter database flashback off;
+exit;
+```
+
+```
+srvctl stop instance -db DEVRACDB_MN -instance DEVRACDB1
+srvctl start database -db DEVRACDB_MN
+```
+
+from the new home run dbua
+
+after dbua, you MUST copy back the tsnnames.ora from the old home to the new. After that re-enable the configuration (after starting the broker of course).
 
 
 
