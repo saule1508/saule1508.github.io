@@ -3,7 +3,7 @@ published: false
 ---
 ## upgrade oracle 12.1.0.1 to 12.1.0.2
 
-I have a RAC production setup with a standby database (the standby is single-instance and non-ASM) and I must upgrade it from 12.1.0.1 to 12.1.0.2. I think this is a bit stupid because Oracle 12.2 is about to be released, but I don't have the choice to wait for 12.2.
+I have a RAC production setup with a standby database (the standby is single-instance and non-ASM) and I must upgrade it from 12.1.0.1 to 12.1.0.2. 
 
 In those case it is important to do a rehearsal and to be able to learn the process, that's why I have set-up a RAC on VMWare ESX. To mirror the production set-up I also added a dataguard (also on ESX). 
 
@@ -14,8 +14,11 @@ The process is the following
 - install the software on the standby (install soft only) and on the node 1 of the RAC (install soft only)
 - run cluvfy
 - run preupgrade scripts and do the fixup
-- stop the apply on the standby, stop the standby, prepare the new home (copy spfile, password file, modifyl listener.ora, oratab etc.), then startup mount the standby with the new home. Restart the apply
+- disable the broker configuration and set dg_broker_start to false scope=both 
+- stop the standby, copy spfile, password file, listener.ora from old to new home and edit the listener.ora, oratab. Keep the standby shutdown
 - start dbua on the primary RAC instance 1
+- startup mount the standby and re-enable the broker configuration
+- do the postfixup scripts
 
 let's document those steps;
 
@@ -59,7 +62,7 @@ Anyway, I choosed to ignore and I installed the soft on evs-rv-orarac01 (primary
 
 **cluvfy**
 
-This is a nice utility that must be downloaded from technet in the form of a zip file (cvupack_Linux_x86_64.zip) and unzipped in a directory owner by user oracle, in my case in /home/oracle/cvu
+This is a nice utility that must be downloaded from technet in the form of a zip file (cvupack_Linux_x86_64.zip) and unzipped in a directory owned by user oracle, in my case in /home/oracle/cvu
 Note: before the grid upgrade, I downloaded, installed and run the same utility but for user grid. Since we are now upgrading the database we must run this script with the oracle user
 
 ```
@@ -89,7 +92,7 @@ and of course one must carefully review the log file, and execute the preupgrade
 
 **upgrade**
 
-once all pre-check are ok, we can do the actual update. The idea is to start the standby from the new home and put it in apply state, so that when the primary is being upgraded the changes done during the upgrade are propagated to the standby.
+once all pre-check are ok, we can do the actual update. The idea is to disable the broker configuration and to keep the standby shutdown (it is probably possible to keep the standby in apply-mode but it did not work for me). Then run the upgrade assistant on the primary and at the end restart the standby in the new home then enable the broker
 
 
 on the standby - evs-rv-orarac03 -
@@ -108,7 +111,7 @@ disable the dg broker on both the primary and the dataguard
 ALTER SYSTEM SET DG_BROKER_START=FALSE scope=both sid='*';
 ```
 
-stop the database and stop the listener, then install the files in the new home
+stop the database and stop the listener on the standby, then install the files in the new home
 
 ```
 lsrnctl stop
@@ -119,6 +122,7 @@ exit;
 EOF
 ```
 
+```
 cd /u01/app/oracle/product/12.1.0
 cp ./db_home1/dbs/spfileDEVRACDB3.ora ./db_home2/dbs/
 cp ./db_home1/dbs/orapwDEVRACDB3 ./db_home2/dbs
@@ -127,18 +131,6 @@ cp ./db_home1/network/admin/*.ora ./db_home2/network/admin/
 
 edit the listener.ora and change the oracle home
 edit /etc/oratab and change the oracle home
-
-switch to the new oracle home then start the database mount and start the listener. Disable flash back
-
-```
-sqlplus / as sysdba
-startup mount;
-alter database set flashback off;
-exit
-
-```
-lsnrctl start
-```
 
 on the primary - evs-rv-orarac01 -
 
@@ -191,13 +183,9 @@ srvctl start database -db DEVRACDB_MN
 
 from the new home run dbua
 
-after dbua, you MUST copy back the tsnnames.ora from the old home to the new. After that re-enable the configuration (after starting the broker of course).
+after dbua, on the primary, you MUST copy back the tsnnames.ora from the old home to the new. After that re-enable the broker configuration (after starting the broker of course).
 
-
-
-
-
-
-
-
-Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
+```
+alter system set dg_broker_start=true scope=both sid='*';
+enable configuration;
+```
