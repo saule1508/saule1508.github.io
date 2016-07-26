@@ -189,3 +189,5 @@ after dbua, on the primary, you MUST copy back the tsnnames.ora from the old hom
 alter system set dg_broker_start=true scope=both sid='*';
 enable configuration;
 ```
+
+do not forget to turn flashback on again and to re-enable the jobs that were disabled before the upgrade.
