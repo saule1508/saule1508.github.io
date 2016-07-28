@@ -38,7 +38,7 @@ edit the file /home/oracle/myinit.ora. Once done, we will stop the database, sta
 srvctl stop database -db DEVRACDB_MN
 sqlplus /nolog
 connect / as sysdba
-startup mount;
+startup nomount pfile='/home/oracle/myinit.ora';
 create spfile='+DATA/DEVRACDB_MN/spfiledevracdb_mn' from pfile='/home/oracle/myinit.ora'
 shutdown ;
 exit;
@@ -46,6 +46,10 @@ exit;
 
 and now we can restart the database with srvctl
 
+```
+srvctl start database -db DEVRACDB_MN
+```
+
+then use sqlplus show parameter command to see that the parameters are changed.
 
 
-Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
