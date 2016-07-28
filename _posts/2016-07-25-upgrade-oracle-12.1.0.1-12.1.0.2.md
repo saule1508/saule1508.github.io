@@ -1,7 +1,6 @@
 ---
 published: true
 ---
-## upgrade oracle 12.1.0.1 to 12.1.0.2
 
 I have a RAC production setup with a standby database (the standby is single-instance and non-ASM) and I must upgrade it from 12.1.0.1 to 12.1.0.2. 
 
