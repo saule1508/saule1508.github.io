@@ -4,21 +4,22 @@ title: Patching Oracle RAC 12c with latest PSU
 published: true
 ---
 
-After installing a RAC with its standby database, doing the upgrade from 12.1.0.1 to 12.1.0.2, now it is time to apply the latest patch set updates. Patching a RAC with a dataguard requires a lot of preparation upfront, so I am not planning to do this every 3 months.
+After doing an upgrade from 12.1.0.1 to 12.1.0.2 (previous post), it is time to apply the latest patch set updates. Patching a RAC with a dataguard requires a lot of preparation upfront, it is really worth having a test environment to test it before and get used to all the subtilities of the process.
 
-Firt of all head to this document on metaling: [Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1)](Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1))
+Firt of all head to this document on metalink: [Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1)](Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1))
 
 Basically, in my case of a RAC 12.1.0.2, as of july 2016, I need the GSI patch set (patch for GRID Home), the database Patch set (patch for Oracle home) and the OJVM patch set (for Oracle home only, not needed on Grid home). I could download a bundle with the 3 of them, however there is a catch: the OJVM patch is a non-rolling patch and it requires a full shutdown of everyting on the cluser: therefore the way I am familiar with, using opatchauto, will not work as usual.
 
-So bottom line: I will apply a bundle patch for GI PSU and DB PSU with opatchauto (it will do a rolling patch update) and after I will apply the OJVM patch with a complete downtime. It is obviously not the optimal way.
+So bottom line: I will apply the GI PSU with opatchauto (it will do a rolling patch update and will patch both the GI home and the ORACLE home). After I will apply the OJVM patch which requires a complete downtime. It is obviously not the optimal way, next time I'll try to do all 3 in a complete downtime.
 
 so I have two of them:
--12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
--OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
+
+- 12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
+- OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
 but for the dataguard, since it is a single instance database (not RAC), I need 
 - 12.1.0.2.160719 (Jul 2016) Database Patch Set Update (DB PSU): 23054246
--OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
+- OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
 The grid infrastructure PSU, 23273629, will patch both the GI HOME and the DB HOME. It must be executed on one node after the other.
 
