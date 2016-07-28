@@ -28,9 +28,11 @@ The OJVM PSU is a bit involved on the RAC, it requires a complete downtime and i
 **note about dataguard**: for the standby my strategy is the following. First set transport-off and apply-off using the broker (dgmgrl command line). Then stop the db and the listener and apply both patches but don't run the datapatch utility on the standby. Keep the db stopped, it will be restarted - in mount mode - when the primary is fully patched. At this time startup mount the DB (mount, not yet open), set transport-on and apply-on so that the standby will recover from the primary. When this is done the standby can be opened (its state will become read only with apply)
 
 
-===opatch utility
+## opatch utility
 
-first think: get the latest version of opatch for your version. In this case the file is p6880880_121010_Linux-x86-64.zip and, strangely, it contains opatch version 12.2.0.1.5. It looks like there are some improvements in this version of OPatch, especially the response file is not needed anymore. But the  documentation is not completly up to date and all the blogs still mention this response file which is a bit confusing
+First get the latest version of opatch for your version. In this case the file is p6880880_121010_Linux-x86-64.zip and, strangely, it contains opatch version 12.2.0.1.5. 
+
+It looks like there are some improvements in this version of OPatch, especially the response file is not needed anymore. But the  documentation is not completly up to date and all the blogs still mention this response file which is a bit confusing
 
 ```
 scp opatch/p6880880_121010_Linux-x86-64.zip oracle@evs-rv-orarac01:/u01/staging/opatch/
@@ -63,7 +65,7 @@ it says 12.2.0.1.5
 
 now let's move on to PSU 
 
-===12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
+## 12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
 
 as grid and as oracle, run the following
 
@@ -112,7 +114,7 @@ check the install with opatch lsinventory and with the following sql
 select patch_uid,version,action,status,ACTION_TIME,description from dba_registry_sqlpatch;
 ```
 
-===OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
+## OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
 this patch is not rolling and requires a full downtime
 
