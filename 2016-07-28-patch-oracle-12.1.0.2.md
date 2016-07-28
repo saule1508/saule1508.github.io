@@ -12,7 +12,9 @@ so:
 -12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
 -OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
-the first patch, 23273629, will do both the GI HOME and the DB HOME, in a rolling fashion (so all nodes). The second patch is a bit involved on the RAC, it requires a complete downtime and it requires to run datapatch in startup upgrade mode with the parameter cluster_database set to false (the readme is good).
+the first patch, 23273629, will patch both the GI HOME and the DB HOME. It must be executed on one node after the other.
+
+The second patch is a bit involved on the RAC, it requires a complete downtime and it requires to run datapatch in startup upgrade mode with the parameter cluster_database set to false (this is all explained in the readme).
 
 ===opatch utility
 
@@ -73,17 +75,33 @@ as user root run opatch with -analyze flag: this will only test the patch
 export PATH=$PATH:$ORACLE_HOME/OPatch
 opatchauto apply /u01/staging/patch_grid/23273629 -analyze
 ```
-I do that on the other node also, not sure if it is needed though. So copy the zip file to the second node and run the analyze also.
+Do that on the other node also.
 
-Luckily on metalink I saw there is a bug with the database part of the patch, the work-around is well documented. This shows how important it is to read all documentation and readme upfront. 
-The note is : Doc ID 2163593.1. The work-around implies installing unixODBC and unixODBC-devel then do a relink inside oracle home. There is an alternative work-around but it did not work for me.
+Luckily on metalink I saw there is a bug with the database part of the patch, the work-around is well documented. This shows how important it is to read all documentation and readme upfront.
+
+The note documenting the bug is: Doc ID 2163593.1. The work-around implies installing unixODBC and unixODBC-devel then do a relink inside oracle home. There is an alternative work-around but it did not work for me.
 
 as user root, on node 1
 
 ```
-opatchauto apply /u01/staging/patch_grid/23273629
+# opatchauto apply /u01/staging/patch_grid/23273629
 ```
-this takes time
+this takes time and at it end it says that four patches were successfully applied
+
+
+as user root, on node 2
+
+```
+# opatchauto apply /u01/staging/patch_grid/23273629
+```
+
+check the install with opatch lsinventory and with the following sql
+
+```
+select * from dba_registry_sqlpatch;
+```
+
+
 
 
 Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
