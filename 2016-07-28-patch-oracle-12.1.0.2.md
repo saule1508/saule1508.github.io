@@ -8,6 +8,14 @@ Basically, in my case of a RAC 12.1.0.2, as of july 2016, I need the GSI patch s
 
 So bottom line: I will apply a bundle patch for GI PSU and DB PSU with opatchauto (it will do a rolling patch update) and after I will apply the OJVM patch with a complete downtime. It is obviously not the optimal way.
 
+so:
+-12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
+-OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
+
+the first patch, 23273629, will do both the GI HOME and the DB HOME, in a rolling fashion (so all nodes). The second patch is a bit involved on the RAC, it requires a complete downtime and it requires to run datapatch in startup upgrade mode with the parameter cluster_database set to false (the readme is good).
+
+===opatch utility
+
 first think: get the latest version of opatch for your version. In this case the file is p6880880_121010_Linux-x86-64.zip and, strangely, it contains opatch version 12.2.0.1.5. It looks like there are some improvements in this version of OPatch, especially the response file is not needed anymore. But the  documentation is not completly up to date and all the blogs still mention this response file which is a bit confusing
 
 ```
@@ -39,7 +47,9 @@ $ORACLE_HOME/OPatch/opatch version
 ```
 it says 12.2.0.1.5
 
+now let's move on to PSU 
 
+===12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
 
 
 
