@@ -1,4 +1,8 @@
-## Patching oracle
+---
+layout: post
+title: Patching Oracle RAC 12c with latest PSU
+published: true
+---
 
 After installing a RAC with its standby database, doing the upgrade from 12.1.0.1 to 12.1.0.2, now it is time to apply the latest patch set updates. Patching a RAC with a dataguard requires a lot of preparation upfront, so I am not planning to do this every 3 months.
 
