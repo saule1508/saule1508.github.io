@@ -8,6 +8,40 @@ Basically, in my case of a RAC 12.1.0.2, as of july 2016, I need the GSI patch s
 
 So bottom line: I will apply a bundle patch for GI PSU and DB PSU with opatchauto (it will do a rolling patch update) and after I will apply the OJVM patch with a complete downtime. It is obviously not the optimal way.
 
+first think: get the latest version of opatch for your version. In this case the file is p6880880_121010_Linux-x86-64.zip and, strangely, it contains opatch version 12.2.0.1.5. It looks like there are some improvements in this version of OPatch, especially the response file is not needed anymore. But the  documentation is not completly up to date and all the blogs still mention this response file which is a bit confusing
+
+```
+scp opatch/p6880880_121010_Linux-x86-64.zip oracle@evs-rv-orarac01:/u01/staging/opatch/
+cd $ORACLE_HOME
+mv OPatch OPatch.old
+unzip /u01/staging/opatch/p6880880_121010_Linux-x86-64.zip
+./OPatch/opatch version
+```
+
+this must be done on all nodes in the ORACLE_HOME (with user oracle) and in the GRID_HOME (this time with user grid)
+
+for user grid it is a bit more complex because the user has no write right on the GRID_HOME, so I cannot unzip the file as user grid. So I did it with user root, then set ownership and permission similar to the current OPatch
+
+as user root
+
+```
+cd /u01/app/12.1.0.2/grid
+mv OPatch OPatch.old
+unzip /u01/staging/opatch/p6880880_121010_Linux-x86-64.zip
+chown grid:oinstall -R OPatch
+chmod 766 OPatch
+```
+
+as user grid
+
+```
+$ORACLE_HOME/OPatch/opatch version
+```
+it says 12.2.0.1.5
+
+
+
+
 
 
 Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
