@@ -1,4 +1,6 @@
 ---
+layout: post
+title: Upgrade Oracle 12.1.0.1 to 12.1.0.2
 published: true
 ---
 
