@@ -1,6 +1,6 @@
 ## Patching oracle
 
-After installing a RAC with its standby database, doing the upgrade from 12.1.0.1 to 12.1.0.2, now it is time to apply the latest patch set updates. I am not sure how much important patching is and I am wondering if it is worth the trouble. Indeed patching a RAC with a dataguard requires a lot of preparation upfront.
+After installing a RAC with its standby database, doing the upgrade from 12.1.0.1 to 12.1.0.2, now it is time to apply the latest patch set updates. Patching a RAC with a dataguard requires a lot of preparation upfront, so I am not planning to do this every 3 months.
 
 Firt of all head to this document on metaling: [Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1)](Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1))
 
@@ -8,13 +8,20 @@ Basically, in my case of a RAC 12.1.0.2, as of july 2016, I need the GSI patch s
 
 So bottom line: I will apply a bundle patch for GI PSU and DB PSU with opatchauto (it will do a rolling patch update) and after I will apply the OJVM patch with a complete downtime. It is obviously not the optimal way.
 
-so:
+so I have two of them:
 -12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
 -OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
-the first patch, 23273629, will patch both the GI HOME and the DB HOME. It must be executed on one node after the other.
+but for the dataguard, since it is a single instance database (not RAC), I need 
+- 12.1.0.2.160719 (Jul 2016) Database Patch Set Update (DB PSU): 23054246
+-OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
-The second patch is a bit involved on the RAC, it requires a complete downtime and it requires to run datapatch in startup upgrade mode with the parameter cluster_database set to false (this is all explained in the readme).
+The grid infrastructure PSU, 23273629, will patch both the GI HOME and the DB HOME. It must be executed on one node after the other.
+
+The OJVM PSU is a bit involved on the RAC, it requires a complete downtime and it requires to run datapatch in startup upgrade mode with the parameter cluster_database set to false (this is all explained in the readme).
+
+**note about dataguard**: for the standby my strategy is the following. First set transport-off and apply-off using the broker (dgmgrl command line). Then stop the db and the listener and apply both patches but don't run the datapatch utility on the standby. Keep the db stopped, it will be restarted - in mount mode - when the primary is fully patched. At this time startup mount the DB (mount, not yet open), set transport-on and apply-on so that the standby will recover from the primary. When this is done the standby can be opened (its state will become read only with apply)
+
 
 ===opatch utility
 
@@ -194,5 +201,6 @@ from DBA_REGISTRY_SQLPATCH
 order by BUNDLE_SERIES;
 ```
 
+don't forget to take care of the dataguard, as mentionned above.
 
-Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
+
