@@ -60,13 +60,11 @@ $ORACLE_HOME/OPatch/opatch lsinventory -detail -oh $ORACLE_HOME
 ```
 NB: it will create a text file in $ORACLE_HOME/cfgtoollogs/opatch/lsinv
 
-
 as user grid, unzip the file p23273629_121020_Linux-x86-64.zip in /u01/staging/patch_grid.
 
 ```
 unzip p23273629_121020_Linux-x86-64.zip 
 ```
-
 
 as user root run opatch with -analyze flag: this will only test the patch
 
@@ -94,14 +92,107 @@ as user root, on node 2
 ```
 # opatchauto apply /u01/staging/patch_grid/23273629
 ```
+this time you'll see a message saying that it is applying the SQL patches on the RAC home, i.e. because it is the last node it will run datapatch
 
 check the install with opatch lsinventory and with the following sql
 
 ```
-select * from dba_registry_sqlpatch;
+select patch_uid,version,action,status,ACTION_TIME,description from dba_registry_sqlpatch;
 ```
 
+===OJVM PATCH SET UPDATE 12.1.0.2.160719: 23177536
 
+this patch is not rolling and requires a full downtime
+
+get p23177536_121020_Linux-x86-64.zip into /u01/staging/patch_jvm on all nodes (user oracle) and unzip, then run
+
+```
+$ORACLE_HOME/OPatch/opatch prereq CheckConflictAgainstOHWithDetail -ph /u01/staging/patch_jvm/23177536
+```
+stop database and all services running on ORACLE_HOME
+
+```
+srvctl stop database -db DEVRACDB_MN
+```
+
+as root
+
+```
+crsctl stop cluster -all
+```
+
+then check the status of crsd with and wait until it is down
+
+```
+crsctl status resource -t -init
+```
+
+on both nodes I also did (probably not needed)
+
+```
+crsctl stop crs
+```
+
+whith ps I see there is nothing running in the ORACLE_HOME (there is still one process in the GRID_HOME though, a java process running the class oracle.rat.tfa.TFAMain. It is ok because the GRID_HOME will not be patched.
+
+On node 1, as user oracle, I can apply the patch
+
+```
+cd /u01/staging/patch_jvm/23177536
+$ORACLE_HOME/OPatch/opatch apply
+```
+
+it will apply the patch on both nodes.
+
+Now we must run datapatch, which is a bit tricky on a RAC
+
+As user oracle, on node 1
+
+```
+sqlplus /nolog
+connect / as sysdba
+startup 
+alter system set cluster_database=false scope=spfile;
+exit;
+srvctl stop database -db DEVRACDB_MN
+sqlplus /nolog
+connect / as sysdba
+startup upgrade
+```
+
+now we can run datapatch
+```
+cd $ORACLE_HOME/OPatch
+./datapatch -verbose
+```
+
+```
+sqlplus /nolog
+connect / as sysdba
+alter system set cluster_database=true scope=spfile;
+shutdown;
+```
+
+and finally we can restart all
+
+first restart crs on the second node (it was stopped, probably for no good reason)
+
+```
+crsctl start crs
+```
+
+then restart the database
+
+```
+svrctl start database -db DEVRACDB_MN
+```
+then check in the dba_registry_sqlpatch view;
+
+```
+select PATCH_ID, PATCH_UID, VERSION, STATUS, DESCRIPTION
+from DBA_REGISTRY_SQLPATCH
+order by BUNDLE_SERIES;
+```
 
 
 Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
