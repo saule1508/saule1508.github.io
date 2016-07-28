@@ -51,7 +51,39 @@ now let's move on to PSU
 
 ===12.1.0.2.160719 (Jul 2016) Grid Infrastructure Patch Set Update (GI PSU): 23273629
 
+as grid and as oracle, run the following
 
+```
+$ORACLE_HOME/OPatch/opatch lsinventory -detail -oh $ORACLE_HOME
+```
+NB: it will create a text file in $ORACLE_HOME/cfgtoollogs/opatch/lsinv
+
+
+as user grid, unzip the file p23273629_121020_Linux-x86-64.zip in /u01/staging/patch_grid.
+
+```
+unzip p23273629_121020_Linux-x86-64.zip 
+```
+
+
+as user root run opatch with -analyze flag: this will only test the patch
+
+```
+. /usr/local/bin/oraenv
+export PATH=$PATH:$ORACLE_HOME/OPatch
+opatchauto apply /u01/staging/patch_grid/23273629 -analyze
+```
+I do that on the other node also, not sure if it is needed though. So copy the zip file to the second node and run the analyze also.
+
+Luckily on metalink I saw there is a bug with the database part of the patch, the work-around is well documented. This shows how important it is to read all documentation and readme upfront. 
+The note is : Doc ID 2163593.1. The work-around implies installing unixODBC and unixODBC-devel then do a relink inside oracle home. There is an alternative work-around but it did not work for me.
+
+as user root, on node 1
+
+```
+opatchauto apply /u01/staging/patch_grid/23273629
+```
+this takes time
 
 
 Enter text in [Markdown](http://daringfireball.net/projects/markdown/). Use the toolbar above, or click the **?** button for formatting help.
