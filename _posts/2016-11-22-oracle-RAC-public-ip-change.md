@@ -4,22 +4,20 @@ title: Oracle RAC change public IP addresses
 published: false
 ---
 
-All the IP's addresses are being changed at my work and so I had to reconfigure a RAC to accept the VIP and the scan changes. Both changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
+Today I had to reconfigure a RAC because the public IP's are all changed (ip of the hosts, ip of the VIP and IP's of the scan. Both changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
 
 ## Collect info
 
 get the clustername, the scan name, the nodes the old and the new IP's 
 
 clustername: see metalink note 577300.1 on how to get it, or simply use olsnodes -c
-
 database name: mydb (use srvctl config to get the name)
-
 nodes: use olsnodes
 ```
 #olsnodes -i
 ```
 
-Then gather the old and new IP's for the public interface, in my case eth0
+Then gather the old and new IP's for the public interface, in my case eth0, and keep them at hand
 
 node 1
 
@@ -68,8 +66,8 @@ now it is time to change the vip
 
 as user grid
 ```
-srvctl stop vip -n uefa-s-ora01 ---> it complains about the listener so let us use the -f option
-srvctl stop vip -n uefa-s-ora01 -f
+srvctl stop vip -n <node name 1> ---> it complains about the listener so let us use the -f option
+srvctl stop vip -n <node name 1> -f
 ```
 check that the vip is down
 ```
@@ -89,7 +87,7 @@ Now, as root, we can modify the vip in the cluster config
 ```
 check the result
 ```
-#srvctl config nodeapps -n node1 -a
+#srvctl config nodeapps -n <node name 1> -a
 ```
 
 on the second node, do the same
@@ -101,7 +99,7 @@ check with crsctl status resource and with ipconfig that it is down, then change
 
 As user root
 ```
-#srvctl modify nodeapps -n uefa-s-ora01 -A 10.143.12.23/255.255.248.0/eth0
+#srvctl modify nodeapps -n <node name node2> -A 10.143.12.24/255.255.248.0/eth0
 ```
 
 ## modify scan
@@ -117,8 +115,6 @@ as root, look the current config
 ```
 srvctl config scan
 ```
-
-
 ```
 srvctl stop scan_listener
 srvctl stop scan
