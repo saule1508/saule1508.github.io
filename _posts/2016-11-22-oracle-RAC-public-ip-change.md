@@ -15,6 +15,7 @@ get the clustername, the scan name, the nodes, the old and the new IP's and keep
 **database name**: use srvctl config to get the name
 
 **nodes names**: use olsnodes
+
 ```
 #olsnodes -i
 ```
@@ -43,7 +44,7 @@ vip
 
 **scan**
 
-Scan name: myscan-name (get it with srvctl config scan)
+Scan name: get the scan name it with srvctl config scan
 
 IP: 172.23.14.54, 172.23.14.55, 172.23.14.56 (netmask 255.255.0.0) will become 10.143.12.25/6/7 netmask 10.143.8.1 
 
@@ -67,15 +68,25 @@ as root, delete the interface and recreate it with the new network
 now it is time to change the vip
 
 as user grid
+
 ```
-srvctl stop vip -n <node name 1> ---> it complains about the listener so let us use the -f option
+srvctl stop vip -n <node name 1>
+```
+
+it complains about the listener so let us use the -f option
+
+```
 srvctl stop vip -n <node name 1> -f
 ```
+
 check that the vip is down
+
 ```
 crsctl status resource -t
 ```
+
 check that the vip is not bound to eth0 anymore
+
 ```
 ifconfig -a
 ```
@@ -87,7 +98,9 @@ Now, as root, we can modify the vip in the cluster config
 ```
 #srvctl modify nodeapps -n <node name node1>  -A 10.143.12.23/255.255.248.0/eth0
 ```
+
 check the result
+
 ```
 #srvctl config nodeapps -n <node name 1> -a
 ```
@@ -97,9 +110,11 @@ on the second node, do the same
 ```
 #srvctl stop vip -n <node name node2> -f
 ```
+
 check with crsctl status resource and with ipconfig that it is down, then change hosts file and DNS and then change cluster config.
 
 As user root
+
 ```
 #srvctl modify nodeapps -n <node name node2> -A 10.143.12.24/255.255.248.0/eth0
 ```
@@ -109,14 +124,17 @@ As user root
 it is easy and it is explained in doc 952903.1
 
 first verify that the DNS resolves to the new IP's 
+
 ```
 nslookup <scan-name>
 ```
 
 as root, look the current config
+
 ```
 srvctl config scan
 ```
+
 ```
 srvctl stop scan_listener
 srvctl stop scan
@@ -124,6 +142,7 @@ srvctl modify scan -n <scan name>
 ```
 
 check the new config
+
 ```
 srvctl config scan
 ```
