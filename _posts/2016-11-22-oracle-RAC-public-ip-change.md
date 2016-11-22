@@ -1,25 +1,27 @@
 ---
 layout: post
 title: Oracle RAC change public IP addresses
-published: false
+published: true
 ---
 
-Today I had to reconfigure a RAC because the public IP's are all changed (ip of the hosts, ip of the VIP and IP's of the scan. Both changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
+Today I had to reconfigure a RAC because the public IP's are all changed (ip addresses of the hosts, ip addresses of the VIP and IP's of the scan. Both the VIP and the SCAN changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
 
 ## Collect info
 
-get the clustername, the scan name, the nodes the old and the new IP's 
+get the clustername, the scan name, the nodes, the old and the new IP's and keep this information at hand. 
 
-clustername: see metalink note 577300.1 on how to get it, or simply use olsnodes -c
-database name: mydb (use srvctl config to get the name)
-nodes: use olsnodes
+**clustername**: see metalink note 577300.1 on how to get it, or simply use olsnodes -c
+
+**database name**: use srvctl config to get the name
+
+**nodes names**: use olsnodes
 ```
 #olsnodes -i
 ```
 
 Then gather the old and new IP's for the public interface, in my case eth0, and keep them at hand
 
-node 1
+**node 1**
 
 eth0
 
@@ -29,7 +31,7 @@ vip
 
 172.23.14.52/255.255.0.0 (check with  srvctl config nodeapps) ---> will become 10.143.12.23/255.255.248.0
 
-node 2
+**node 2**
 
 eth0
 
@@ -39,7 +41,7 @@ vip
 
 172.23.14.53/255.255.0.0 ---> will become 10.143.12.24/255.255.248.0
 
-scan
+**scan**
 
 Scan name: myscan-name (get it with srvctl config scan)
 
