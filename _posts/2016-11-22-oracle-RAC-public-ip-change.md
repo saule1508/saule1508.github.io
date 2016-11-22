@@ -4,22 +4,22 @@ title: Oracle RAC change public IP addresses
 published: false
 ---
 
-All the IP's are being changed at my work and so I had to reconfigure a RAC to accept the VIP and the scan changes. Both changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
+All the IP's addresses are being changed at my work and so I had to reconfigure a RAC to accept the VIP and the scan changes. Both changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
 
 ## Collect info
 
 get the clustername, the scan name, the nodes the old and the new IP's 
 
-clustername: mycluster-s-cl (see metalink note 577300.1 on how to get it, or simply use olsnodes -c)
+clustername: see metalink note 577300.1 on how to get it, or simply use olsnodes -c
 
-database name: mydb (use srvctl config)
+database name: mydb (use srvctl config to get the name)
 
-nodes
+nodes: use olsnodes
 ```
 #olsnodes -i
 ```
 
-old and new IP's
+Then gather the old and new IP's for the public interface, in my case eth0
 
 node 1
 
@@ -51,26 +51,26 @@ note: use IP calculator (online web site) to see the network and the netmask of 
 
 ## Perform changes
 
-as oracle
+as oracle, I stopped the DB. However it is probably not needed.
 
 ```
 srvctl stop database -db mydb
 ```
 
-as root
+as root, delete the interface and recreate it with the new network
+
 ```
 #oifcfg delif -global eth0
 #oifcfg setif -global eth0/10.143.8.0/21:public
 ```
 
-now let us change the vip
+now it is time to change the vip
 
-as grid
+as user grid
 ```
 srvctl stop vip -n uefa-s-ora01 ---> it complains about the listener so let us use the -f option
 srvctl stop vip -n uefa-s-ora01 -f
 ```
-
 check that the vip is down
 ```
 crsctl status resource -t
@@ -82,28 +82,24 @@ ifconfig -a
 
 Change /etc/hosts and change the DNS
 
-as root
+Now, as root, we can modify the vip in the cluster config
 
 ```
-srvctl modify nodeapps -n node1  -A 10.143.12.23/255.255.248.0/eth0
-
+#srvctl modify nodeapps -n <node name node1>  -A 10.143.12.23/255.255.248.0/eth0
 ```
-
-check
+check the result
 ```
 #srvctl config nodeapps -n node1 -a
 ```
 
-on node2
+on the second node, do the same
 
 ```
-#srvctl stop vip -n node2 -f
+#srvctl stop vip -n <node name node2> -f
 ```
-check with crsctl status resource and with ipconfig that it is down
+check with crsctl status resource and with ipconfig that it is down, then change hosts file and DNS and then change cluster config.
 
-change hosts file and DNS
-
-change cluster config as root
+As user root
 ```
 #srvctl modify nodeapps -n uefa-s-ora01 -A 10.143.12.23/255.255.248.0/eth0
 ```
@@ -134,8 +130,6 @@ check the new config
 srvctl config scan
 ```
 
-
 ## change IP at OS level
 
 this implies changing /etc/sysconfig/network-scripts/ifcfg-eth0 and /etc/sysconfig/network, /etc/hosts, maybe the know_hosts in the home of oracle, grid and root.
-
