@@ -12,7 +12,7 @@ My company is evaluating splunk as main tool for support (log analysis) and moni
 
 My company develops a product which is then installed at customer sites in a black box model: we deliver a rac with the hardware (a few linux servers and windows servers) and the software. 
 
-For monitoring our product we have a small Nagios set-up that checks the hardware and the services as well as a few business related checks (done via the ssh plugin). We have a quite good experience with Nagios for monitoring the MAD systems. Nagios is easy to set-up, it has a powerful file based configuration, 
+For monitoring our product we have a small Nagios set-up that checks the hardware and the services as well as a few business related checks (done via the ssh plugin). We have a quite good experience with Nagios for monitoring. Nagios is easy to set-up, it has a powerful file based configuration (which is important for versioning and deployment), 
 there are a very large amount of plugin to monitor every aspect of the infrastructure. 
 It is also quite easy to do application/business monitoring with nagios: you can simply plug-in your shell script and let nagios execute the script. 
 
@@ -174,4 +174,4 @@ It did not take me long to build more or less the same console with splunk as na
 
 So if you can live with the alerting limitations I feel that splunk is good enough for the job (at least in the case of my application). And then of course you can do a lot more with splunk, it can replace cacti as well (for capacity management and performance monitoring). It has really great vizualisations tools so that you can make attractive dashboard very easily.
 
-So not taking into account the price (nagios is 100% free), I think splunk is a very valuable addition to your toolset.
+So not taking into account the price (nagios is 100% free), I think splunk is a very valuable addition to your toolset. It would rather complement nagios instead of replacing it though but there is some overlap.
