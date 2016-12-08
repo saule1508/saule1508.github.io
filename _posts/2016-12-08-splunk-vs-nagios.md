@@ -91,7 +91,7 @@ index = myapp_service
 
 the script itself is in /opt/splunkforwarder/etc/apps/myapp/bin
 
-```
+```bash
 #!/bin/bash
  
 NOW=`date --rfc-3339=ns`
