@@ -31,7 +31,7 @@ DEVRACDB_MN:/u01/app/oracle/product/12.1.0/dbhome_1:N:          # line added by 
 
 On both nodes, create the new home
 
-```
+```bash
 sudo mkdir -p /u01/app/12.1.0.2/grid
 sudo chown root:oinstall /u01/app/12.1.0.2
 sudo chown grid:oinstall /u01/app/12.1.0.2/grid
@@ -39,7 +39,7 @@ sudo chown grid:oinstall /u01/app/12.1.0.2/grid
 
 on node 1, unzip the soft in a staging directory
 
-```
+```bash
 mkdir /u01/staging/grid12102 (owned by user grid)
 cd /u01/staging/grid12102
 unzip linuxamd64_12102_grid_1of2.zip 
@@ -48,7 +48,7 @@ unzip linuxamd64_12102_grid_2of2.zip
 
 On node 1, run the cluvfy utility (downloaded from technet or metalink)
 
-```
+```bash
 cd /home/grid/cvu
 unzip cvupack_Linux_x86_64.zip
 ./bin/cluvfy stage -pre crsinst -upgrade -rolling -src_crshome /u01/app/12.1.0/grid -dest_crshome  /u01/app/12.1.0.2/grid -dest_version 12.1.0.2.0 -verbose
@@ -56,31 +56,31 @@ unzip cvupack_Linux_x86_64.zip
 
 note that there is a similar utility in the grid directory when you unzip the soft. But the idea is that the cluvfy is more up to date. Anyway we can give it a run also. Change to the directory where it is located then
 
-```
+```bash
 ./runcluvfy.sh stage -pre crsinst -upgrade -src_crshome /u01/app/12.1.0/grid/ -dest_crshome /u01/app/12.1.0.2/grid -dest_version 12.1.0.2.0 -fixup -verbose
 ```
 
 Get the current version (as user root)
 
-```
+```bash
 crsctl query crs softwareversion -all
 ```
 
 make sure there is no firewall blocking the communication on the interconnect
 
-```
+```bash
 iptables -L
 ```
 
 In case of doubts, remove all rules
 
-```
+```bash
 iptables -F
 ```
 
 Now we can do the install, as user grid on server 1 (where the soft files were unzipped)
 
-```
+```bash
 unset ORACLE_SID
 unset ORACLE_BASE
 unset ORACLE_HOME
@@ -90,7 +90,7 @@ export PATH=/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/g
 
 the last command remove the current ORACLE_HOME from the PATH
 
-```
+```bash
 cd /u01/staging/grid12102/grid
 ./runInstaller
 ```
@@ -101,7 +101,7 @@ cd /u01/staging/grid12102/grid
 
 After the upgrade, check the active version, as root
 
-```
+```bash
 crsctl query crs softwareversion -all
 ```
 
