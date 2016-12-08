@@ -38,7 +38,7 @@ Let's keep the alerting part aside for the moment (I know this is where splunk w
 
 The main nagios services shows all the services monitored, in green, red or yellow together with useful information (message, date, etc.)
 
-![nagios console]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/nagios_console.png)
+![nagios console]({{ site.url }}/images/nagios_console.png)
 
 
 This main nagios screen shows the services and their state, but via this screen you can also acknowledge a problem (so that it stops firing notifications), 
@@ -155,7 +155,7 @@ Adding alerting is very easy, you can have splunk send a mail and/or execute a c
 Here is a screen shot of the dashboard. Note that coloring the rows requires some work from a technical person (change some css on the server) and is not possible for an end-user.
 
 
-![splunk console]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/splunk_console.png)
+![splunk console]({{ site.url }}/images/splunk_console.png)
 
 
 What is lacking compared to nagios is the possibility to acknowledge an alert, stop monitoring one host, re-schedule a check, etc. With splunk you would have to manually edit the csv file (set alerting to 0, so that no alert is sent, or set active to 0, so that it does not show up on the dashboard).
@@ -166,7 +166,7 @@ For monitoring the infrastructure nagios is better than splunk because it has so
 
 With Nagios you can acknowledge an alert (so that it stops firing), you can stop obsessing about a specific service or all services on a host or in a group, it is important in case of planned downtime for example. With splunk it is not built-in the product, so you would have to work-around (the solution I came up with was creating a configuration file on the server).
 
-![nagios alerting]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/nagios_alerting.png)
+![nagios alerting]({{ site.url }}/images/nagios_alerting.png)
 
 Splunk is easy to get started with, very well documented and at the same time offers advanced discovery capabilities in your logs and any other source (as long as it is time based). 
 
