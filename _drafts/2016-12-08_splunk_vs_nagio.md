@@ -2,14 +2,13 @@
 
 ## Abstract
 
-My company develop a product which is then installed at customer sites in a black box model: we deliver a rac with the hardware (a few linux servers and windows server) and the software. 
-For monitoring our product we have a small Nagios set-up that checks the hardware and the services as well as a few business related checks (done via the ssh plugin).
+My company develops a product which is then installed at customer sites in a black box model: we deliver a rac with the hardware (a few linux servers and windows servers) and the software. 
 
-We have a quite good experience with Nagios for monitoring the MAD systems. Nagios is easy to set-up, it has a powerful file based configuration, 
+For monitoring our product we have a small Nagios set-up that checks the hardware and the services as well as a few business related checks (done via the ssh plugin). We have a quite good experience with Nagios for monitoring the MAD systems. Nagios is easy to set-up, it has a powerful file based configuration, 
 there are a very large amount of plugin to monitor every aspect of the infrastructure. 
 It is also quite easy to do application/business monitoring with nagios: you can simply plug-in your shell script and let nagios execute the script. 
-Nagios comes with a console in which you can see the state of all monitored component, where you can acknowledge problems, schedule new test, filter-out, etc.
 
+Nagios comes with a console in which you can see the state of all monitored component, where you can acknowledge problems, schedule new test, filter-out, etc.
 
 Splunk is a log analysis tool, it indexes whatever you tell him to index. It can be anything: log files of course, scripts output, 
 database tables,..as long as it is time-based data. Afterwards you can quickly and easily build all kind of visualizations on the indexed data. 
@@ -31,7 +30,7 @@ Let's keep the alerting part aside for the moment (I know this is where splunk w
 
 The main nagios services shows all the services monitored, in green, red or yellow together with useful information (message, date, etc.)
 
-![nagios console](http://saule1508.github.com/images/nagios_console.png)
+![nagios console](nagios_console.png)
 
 
 This main nagios screen shows the services and their state, but via this screen you can also acknowledge a problem (so that it stops firing notifications), 
@@ -159,7 +158,7 @@ For monitoring the infrastructure nagios is better than splunk because it has so
 
 With Nagios you can acknowledge an alert (so that it stops firing), you can stop obsessing about a specific service or all services on a host or in a group, it is important in case of planned downtime for example. With splunk it is not built-in the product, so you would have to work-around (the solution I came up with was creating a configuration file on the server).
 
-![nagios alerting](nagios_alerting.pnh)
+![nagios alerting](nagios_alerting.png)
 
 Splunk is easy to get started with, very well documented and at the same time offers advanced discovery capabilities in your logs and any other source (as long as it is time based). 
 
@@ -168,6 +167,3 @@ It did not take me long to build more or less the same console with splunk as na
 So if you can live with the alerting limitations I feel that splunk is good enough for the job (at least in the case of my application). And then of course you can do a lot more with splunk, it can replace cacti as well (for capacity management and performance monitoring). It has really great vizualisations tools so that you can make attractive dashboard very easily.
 
 So not taking into account the price (nagios is 100% free), I think splunk is a very valuable addition to your toolset.
-
-
- 
