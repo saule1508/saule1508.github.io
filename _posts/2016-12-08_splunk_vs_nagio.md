@@ -147,7 +147,7 @@ Adding alerting is very easy, you can have splunk send a mail and/or execute a c
 Here is a screen shot of the dashboard. Note that coloring the rows requires some work from a technical person (change some css on the server) and is not possible for an end-user.
 
 
-[splunk console](splunk_console.png)
+![splunk console](splunk_console.png)
 
 
 What is lacking compared to nagios is the possibility to acknowledge an alert, stop monitoring one host, re-schedule a check, etc. With splunk you would have to manually edit the csv file (set alerting to 0, so that no alert is sent, or set active to 0, so that it does not show up on the dashboard).
