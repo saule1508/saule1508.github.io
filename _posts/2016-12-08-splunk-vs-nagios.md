@@ -136,6 +136,8 @@ based on the lookup table and the index myapp_service it is possible to display 
 
 The search query is a bit involved but splunk has a lot of good documentations and forums at your disposal to help you build almost any query. You need an outer join so that services that are not sending data for more than 2 hours (in my case, it depends on the biggest interval of all services monitored)
 
+note: there cannot be a carriage return between the pipes, I added them to make the code readable but you have to remove them.
+
 ``` 
 | inputlookup myapp_service | eval status="red", message="Missing data", service_check_age=0 
 | join type="outer" host,service [ search index=myapp_service earliest=-2h | dedup host,source 
@@ -151,6 +153,17 @@ Adding alerting is very easy, you can have splunk send a mail and/or execute a c
 Here is a screen shot of the dashboard. Note that coloring the rows requires some work from a technical person (change some css on the server) and is not possible for an end-user. To do this row coloring you must install the sample dashboard app and look at their example (it took me a few hours to get it working as well as a few restart of splunk and emptying of my browser cache).
 
 ![splunk console]({{ site.url }}/images/splunk_console.png)
+
+The product manager then wanted me to show a list of our servers colored in green if all services on this host are running fine, in red if one or more service is failed, in yellow if there is one service in warning. To do that, I used a vizualization called "Quick state" (you can donwload it freely): this vizualization requires tupples of the form label, img_url, color.
+
+so first think, let's take care of the image url: one has to install the png in the folder $SPLUNK_HOME/etc/apps/<my app>/appserver/static. Once this is done, it can be referred from within the dashboard via this url : "/static/app/myapp/myfile.png".
+
+The search query for this new dashboard panel is 
+
+```
+| inputlookup myapp_service | eval status="red", message="Missing data", service_check_age=0 | join type="outer" host,service [ search index=myapp_service earliest=-2h | dedup host,source | eval service=source ,last_check_seconds=ceil(now()-_time) | table _time service last_check_seconds host status timestamp message ] | eval status=case(last_check_seconds>age,"red",1=1,status) | table host service last_check_seconds status message | stats count(eval(status="red")) as nbr_red, count(eval(status="yellow")) as nbr_yellow, count(eval(status="green")) as nbr_green by host | eval color=case(nbr_red>0,"red", nbr_yellow>0, "yellow", nbr_green>0,"green",1=1,"grey"), img_url="/static/app/myapp/server.png" | table host img_url color
+```
+![splunk console]({{ site.url }}/images/splunk_quick_state.png)
 
 What is lacking compared to nagios is the possibility to acknowledge an alert, stop monitoring one host, re-schedule a check, etc. With splunk you would have to manually edit the csv file (set alerting to 0, so that no alert is sent, or set active to 0, so that it does not show up on the dashboard). That's the best work-around I have found. Probably it is possible to build interface so that an end-user could edit the csv file via the web interface (?).
 
