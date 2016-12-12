@@ -6,53 +6,49 @@ published: true
 
 My company is evaluating splunk as main tool for support (log analysis) and monitoring. Since we are currently using nagios for monitoring, the question was to see if splunk could replace nagios or would rather supplement it.
 
-# Splunk vs Nagios
-
 ## Abstract
 
 My company develops a product which is then installed at customer sites in a black box model: we deliver a rac with the hardware (a few linux servers and windows servers) and the software. 
 
 For monitoring our product we have a small Nagios set-up that checks the hardware and the services as well as a few business related checks (done via the ssh plugin). We have a quite good experience with Nagios for monitoring. Nagios is easy to set-up, it has a powerful file based configuration (which is important for versioning and deployment), 
-there are a very large amount of plugin to monitor every aspect of the infrastructure. 
-It is also quite easy to do application/business monitoring with nagios: you can simply plug-in your shell script and let nagios execute the script. 
+there is a large amount of plugin to monitor every aspect of the infrastructure (memory usage, event logs, log files, etc.) 
+It is also easy to do application/business monitoring with nagios: you can simply plug-in your shell script and let nagios execute the script (via ssh). 
 
-Nagios comes with a console in which you can see the state of all monitored component, where you can acknowledge problems, schedule new test, filter-out, etc.
+Nagios comes with a web based console in which you can see the state of all monitored component, where you can acknowledge problems, schedule new test, filter-out, etc. It is not super sexy but it is functional and does the job.
 
 Splunk is a log analysis tool, it indexes whatever you tell him to index. It can be anything: log files of course, scripts output, 
 database tables,..as long as it is time-based data. Afterwards you can quickly and easily build all kind of visualizations on the indexed data. 
-It is easy to set-up and you also have a powerful file based configuration (you can also use a web interface, might be nice when you begin but you'll get used to the files quickly). 
+It is easy to set-up and you also have a powerful file based configuration (you can also use a web interface, which is nice when you begin but you'll get used to the files quickly). 
 
 So Splunk is not a replacement for Nagios but it can do part of what Nagios does. Based on indexed data it is possible to generate an alert (the alert is based on a search on the indexed data). 
 With Splunk an alert means: put something in red on a dashboard and/or eventually send a mail or execute a script. 
-Out of the box there is no functionality like acknowledge an alert (so that it stops firing and sending mails) or to filter out a server or a group of services (typically during a planned downtime you would want to do that). It might be possible to work-around those limitations though, to some extent. This is what I experimented.
+Out of the box splunk lacks core functionality like acknowledging an alert (so that it stops firing and sending mails), filtering out a server or a group of services (typically during a planned downtime you would want to do that). It might be possible to work-around those limitations though, to some extent. This is what I experimented.
 
 A second issue, which is not addressed here, is the case of a central set-up vs a distributed set-up and specifically the case where you need local monitoring on a client set-up but would like to also have a central view of all your clients. 
 Note that this use case might not be completely relevant nor realistic. 
 
-With nagios I think you would collect the state changes on the local set-up and then, at specified interval or when a connection is available, send those state changes to the central console for consumption. 
-With splunk I guess one could let the local forwarders connect to the central instance but in reality there might be some challenges to address. 
+With nagios I think you would collect the state changes on the local set-up and then, at specified interval or when a connection is available, send those state changes to the central console for consumption (via ssh, or via ftp ?). 
+With splunk I guess one could let the local forwarders connect to the central instance but in reality there might be some challenges to address (like a burst of useless data being sent whenever the local sites catch up). 
 
 ### A monitoring console
 
 Let's keep the alerting part aside for the moment (I know this is where splunk will be limited compared to nagios) and let us try to build the same console as the nagios main service screen.
 
-The main nagios services shows all the services monitored, in green, red or yellow together with useful information (message, date, etc.)
+One of the main nagios web console screen shows all the services monitored, in green, red or yellow together with useful information (message, date, etc.)
 
-![nagios console]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/nagios_console.png)
+![nagios console]({{ site.url }}/images/nagios_console.png)
 
 
 This main nagios screen shows the services and their state, but via this screen you can also acknowledge a problem (so that it stops firing notifications), 
 you can disable checks on one host (all services on the host), or disable notifications, etc. 
 
-So the requirement for a similar console in splunk would be to have a list of services - hostname couples with the last check date, the status (green, yellow, red) and a message. 
-If a service did not give its state for more than interval (specific to each service/host) it should be displayed as error (in red).
+So a minimal requirement for a similar console in splunk would be to have a dashboard with a list of services - hostname couples with the last check date, the status (green, yellow, red) and a message. If a service did not give its state for more than interval (specific to each service/host) it should be displayed as error (in red).
 
-With nagios, the checks are either provided by plugin or, for your own checks, you would typically distribute your scripts on the target servers 
-and have the central nagios console executes those scripts at regular interval (based on the config).
+With nagios, the checks are either provided by plugin or, for your own checks, you would typically distribute your scripts on the target servers and have the central nagios console executes those scripts at regular interval (based on the config).
 
-But with splunk I feel it is more natural to do it the other way around: you deploy the scripts on the universal forwarders (like for nagios) but it is the universal forwarders 
+But with splunk I feel it is more natural to do it the other way around: you deploy the scripts on the universal forwarders (like for nagios) amd it is the universal forwarders 
 that will execute the scripts at scheduled interval and send the data to the central splunk instance (the indexer which is also the search head in our simple set-up). 
-Basically splunk would function like a passive check in nagios (when the monitored application sends its state to nagios every x minutes). 
+Basically splunk would function like a passive check in nagios (when the monitored application sends its state to nagios every x minutes as opposed to an active check where nagios actively monitor the target servers). 
 
 The splunk way feels more natural but of course it requires that the forwarders can connect to the central splunk instance while with nagios the requirement is that the central nagios server can connect to the local hosts (via ssh and/or via tcp on a specific port for monitoring the windows server).
 
@@ -78,7 +74,7 @@ There are two strategies:
 I tried option 2 since it is easy and because I can re-use the existing scripts (used for nagios).
 
 Typically, on  a forwarder where I want to monitor the megaraid disk array (for example) I will have
-in the inputs.conf (on the forwarders, in /opt/splunkforwarder/etc/apps/mad)
+in the inputs.conf (on the forwarders, in /opt/splunkforwarder/etc/apps/<myapp>)
 
 ```
 [script://./bin/megaraidcheck.sh]
@@ -89,9 +85,9 @@ source = megaraid
 index = myapp_service
 ```
 
-the script itself is in /opt/splunkforwarder/etc/apps/myapp/bin
+the script itself is in /opt/splunkforwarder/etc/apps/<myapp>/bin
 
-```
+```bash
 #!/bin/bash
  
 NOW=`date --rfc-3339=ns`
@@ -111,17 +107,17 @@ cat <<EOF
 EOF
 ```
 
-don't forget to create the index myapp_service on the indexer and you are good to go
+don't forget to create the index <myapp>_service on the indexer and you are good to go
 
 
 ## Splunk dashboard
 
 On the dashboard, we want to see the last check for each service and color it appropriately (green, yellow, red). A difficulty here is that if one check did not happen or is too old (did not happen for more than the pre-defined interval), 
 then it should appear in red. To solve this problem we need to store a configuration somewhere, splunk has the notion of a lookup csv file (could be a database table also). 
-On the server, create this csv file in /opt/splunk/etc/apps/myapp/lookups/ and call it myapp_service
+
+On the server, create this csv file in /opt/splunk/etc/apps/myapp/lookups/ and call it <myapp>_service.csv
 
 ```
-
 host,service,age,active,alerting
 my-host-1,elasticsearch,60,1,0
 my-host-1,megaraid,60,1,0
@@ -132,13 +128,13 @@ my-host-1,tablespace,1800,1,0
 my-host-2,elasticsearch,60,1,0
 my-host-2,megaraid,60,1,0
 ... etc
-
 ```
 
 In this csv the age column indicates the frequency of the check and the alerting column can be used to disable alerts for one service on one host.
 
 based on the lookup table and the index myapp_service it is possible to display the information that corresponds more or less to the nagios dashboard. 
-The search query is a bit involved but splunk has a lot of good documentations and forums at your disposal to help you build almost any query
+
+The search query is a bit involved but splunk has a lot of good documentations and forums at your disposal to help you build almost any query. You need an outer join so that services that are not sending data for more than 2 hours (in my case, it depends on the biggest interval of all services monitored)
 
 ``` 
 | inputlookup myapp_service | eval status="red", message="Missing data", service_check_age=0 
@@ -152,21 +148,19 @@ The search query is a bit involved but splunk has a lot of good documentations a
 
 Adding alerting is very easy, you can have splunk send a mail and/or execute a custom script.
 
-Here is a screen shot of the dashboard. Note that coloring the rows requires some work from a technical person (change some css on the server) and is not possible for an end-user.
+Here is a screen shot of the dashboard. Note that coloring the rows requires some work from a technical person (change some css on the server) and is not possible for an end-user. To do this row coloring you must install the sample dashboard app and look at their example (it took me a few hours to get it working as well as a few restart of splunk and emptying of my browser cache).
 
+![splunk console]({{ site.url }}/images/splunk_console.png)
 
-![splunk console]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/splunk_console.png)
-
-
-What is lacking compared to nagios is the possibility to acknowledge an alert, stop monitoring one host, re-schedule a check, etc. With splunk you would have to manually edit the csv file (set alerting to 0, so that no alert is sent, or set active to 0, so that it does not show up on the dashboard).
+What is lacking compared to nagios is the possibility to acknowledge an alert, stop monitoring one host, re-schedule a check, etc. With splunk you would have to manually edit the csv file (set alerting to 0, so that no alert is sent, or set active to 0, so that it does not show up on the dashboard). That's the best work-around I have found. Probably it is possible to build interface so that an end-user could edit the csv file via the web interface (?).
 
 ## Conclusion
 
-For monitoring the infrastructure nagios is better than splunk because it has some core functionalities that splunk does not have in the area of alerting.
+For monitoring the infrastructure nagios is better than splunk because it has some core functionalities that splunk does not have in the area of alerting. Both comes with a lot of plugins so that your scripting skills will mostly be needed for applicative checks.
 
-With Nagios you can acknowledge an alert (so that it stops firing), you can stop obsessing about a specific service or all services on a host or in a group, it is important in case of planned downtime for example. With splunk it is not built-in the product, so you would have to work-around (the solution I came up with was creating a configuration file on the server).
+With Nagios you can acknowledge an alert (so that it stops firing), you can stop obsessing about a specific service or all services on a host or in a group, it is important in case of planned downtime for example. You can also base the notifications on the business calendar (no mails sent after 6PM or during w-e). With splunk it is not built-in the product, so you would have to work-around (the solution I came up with was creating a configuration file on the server).
 
-![nagios alerting]({{ site.url }}/images/2016-12-08-splunk-vs-nagios/nagios_alerting.png)
+![nagios alerting]({{ site.url }}/images/nagios_alerting.png)
 
 Splunk is easy to get started with, very well documented and at the same time offers advanced discovery capabilities in your logs and any other source (as long as it is time based). 
 
