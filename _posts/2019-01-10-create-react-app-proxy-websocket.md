@@ -4,8 +4,6 @@ title: proxy websocket requests in development with create-react-app
 published: true
 ---
 
-# proxy websocket requests in development with create-react-app
-
 this is inspired from [https://facebook.github.io/create-react-app/docs/proxying-api-requests-in-development#configuring-the-proxy-manually] 
 
 
