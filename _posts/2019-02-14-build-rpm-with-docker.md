@@ -6,9 +6,9 @@ published: false
 
 In my current company I had to build some rpm's in order to distribute my scripts to the servers we are selling to the customers. Since I am leaving this company I wanted to document this way of working as it might be useful for me in the future...
 
-I am using jenkins to kick-off the job, basically launching a script that will
-* First create a docker image containings the necessary packages for rpmbuild and my sources
-* Secondly run a container based on this image and start a script in this container to prepare then execute rpmbuild
+I am using jenkins to kick-off the job, basically jenkins is used to checkout the code then launch a script that will:
+* First create a docker image containings the necessary packages for rpmbuild and my sources;
+* Secondly run a container based on this image and start a script to create the rpm;
 * the created rpm is copied on a bind volume so that jenkins can recuperate it.
 
 jenkins sets the variables BUILD_NUMBER and WORKSPACE. I use BUILD_NUMBER as the release part of the rpm version, but if the build is running on branch develop, then I use "snapshot" instead. The first part of the version is always read from a file called version.txt stored at the root of the git repo. 
@@ -62,7 +62,7 @@ docker run --rm=true -v ${WORKSPACE}/artifacts:/artifacts -e BUILD_NUMBER=${BUIL
 
 ```
 
-The Dockerfile contains something like this. Since jenkins has done the checkout of the repository, everything needed is in the docker build context (i.e. my sources are readily available to be added in the image, see the COPY instructions)
+The Dockerfile contains something similar to the one below. Since jenkins has done the checkout of the repository, everything needed is in the docker build context (i.e. my sources are readily available to be added in the image, see the COPY instructions)
 
 ```bash
 FROM centos:centos7
@@ -81,7 +81,7 @@ RUN mkdir -p /home/rpmbuild/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 RUN echo '%_topdir %{getenv:HOME}/rpmbuild' > /home/rpmbuild/.rpmmacros
 ```
 
-The build_rpm.bash copied inside the docker image, is the script executed in the container (see docker run command). It looks like that
+The build_rpm.bash copied inside the docker image is the script executed in the container (see docker run command). It looks like that
 
 ```bash
 #!/bin/bash
@@ -124,7 +124,7 @@ fi
  
 ```
 
-For reference (and my future usage !), here is how a spec file for one of my rpm looks like
+For reference (and my future usage !), here is how a spec file looks for one of my rpm looks like
 
 ```
 Name: mypackage
