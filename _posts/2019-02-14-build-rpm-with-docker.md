@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Build a rpm with docker
-published: false
+published: true
 ---
 
 In my current company I had to build some rpm's in order to distribute my scripts to the servers we are selling to the customers. Since I am leaving this company I wanted to document this way of working as it might be useful for me in the future...
