@@ -16,7 +16,7 @@ jenkins sets the variables BUILD_NUMBER and WORKSPACE. I use BUILD_NUMBER as the
 So, assuming the file version.txt contains 7.0.0 :
 
 * building on branch develop -> the rpm will be called mypackage-7.0.0-snapshot-noarch.rpm
-* building on another branch -> the rpm will be called mypackage-7.0.0-<BUILD_NUMBER>-noarch.rpm
+* building on another branch -> the rpm will be called mypackage-7.0.0-xxx-noarch.rpm, where xxx is BUILD_NUMBER
 
 Here is how the main script looks like. This script is called from jenkins with a parameter that is the git branch.
 
@@ -124,7 +124,7 @@ fi
  
 ```
 
-For reference (and my future usage !), here is how a spec file looks for one of my rpm looks like
+For reference (and my future usage !), here is how a spec file of one of my rpm looks like:
 
 ```
 Name: mypackage
