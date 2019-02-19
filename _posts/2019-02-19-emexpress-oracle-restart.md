@@ -1,7 +1,7 @@
 ---
 layout: post
 title: em express and Oracle Restart 18
-published: false
+published: true
 ---
 
 Yesterday I installed Oracle 18c with ASM, which implies to install the grid infrastructure software and then the usual Oracle software. This combination of grid + oracle on a standalone server (i.e. not a RAC) is called Oracle restart. 
