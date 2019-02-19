@@ -8,7 +8,7 @@ Yesterday I installed Oracle 18c with ASM, which implies to install the grid inf
 
 Everything went fine but out of the box em express was not working. It turned out it was due to a permission issue on a wallet file and it was not easy to troubleshoot. It happened because I used different users for grid and for oracle, which is quite standard.
 
-First thing is to check if em express is configured: connect to the Oracle instance (not to the +ASM instance !) and execute the function dbms_xdb_config.gethttpsport. It should not run zero
+First thing is to check if em express is configured: connect to the Oracle instance (not to the +ASM instance !) and execute the function dbms_xdb_config.gethttpsport. It should not return zero
 ```
 select dbms_xdb_config.GETHTTPSPORT() from dual;
 ```
