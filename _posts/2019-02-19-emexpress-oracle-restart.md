@@ -4,34 +4,33 @@ title: em express and Oracle Restart 18
 published: false
 ---
 
-Yesterday I installed Oracle 18c with ASM, which implies to install grid infrastructure and then the usual Oracle. This combination of grid + oracle on a standalone server (not a RAC) is called Oracle restart. 
+Yesterday I installed Oracle 18c with ASM, which implies to install the grid infrastructure software and then the usual Oracle software. This combination of grid + oracle on a standalone server (i.e. not a RAC) is called Oracle restart. 
 
-Everything went fine but out of the box em express was not working. It turned out it was due to a permission issue on a wallet file and it was not easy to troubleshoot. It happened because I used different users for grid and for oracle (respectively grid user and oracle user).
+Everything went fine but out of the box em express was not working. It turned out it was due to a permission issue on a wallet file and it was not easy to troubleshoot. It happened because I used different users for grid and for oracle (respectively grid user and oracle user), which is quite standard.
 
-First thing is to check if em express is configured:  Connect to the Oracle instance (not to the +ASM instance !) and execute the function gethttpsport:
+First thing is to check if em express is configured:  connect to the Oracle instance (not to the +ASM instance !) and execute the function dbms_xdb_config.gethttpsport. It should not run zero (if it does, use sethttpsport)
 ```
 select dbms_xdb_config.GETHTTPSPORT() from dual;
 ```
 
 in my case it is 5500 (the default)
 
-then execute lsnrctl status to check that the listener is listening on this port
-
+Then execute lsnrctl status to check that the listener is listening on this port
 
 ```bash
 lsnrctl status
 ```
-shows the following line:
+it shows the following line:
 ```
   (DESCRIPTION=(ADDRESS=(PROTOCOL=tcps)(HOST=XXX-r-ora02)(PORT=5500))(Security=(my_wallet_directory=/u01/app/oracle/product/18.0.0/dbhome_1/admin/MADROOT/xdb_wallet))(Presentation=HTTP)(Session=RAW))
 
 ```
 and so accessing the URL XXX-r-ora02:5500/em in a browser should work (assuming the firewall port is open, if not open it)
-```
+```bash
 sudo firewall-cmd --add-port 5500/tcp --permanent
 sudo systemctl restart firewalld
 ```
-But even after opening the port it was not working. It turned out that in an Oracle restart set-up the listener is started by operating system grid (assuming one installed grid with os user grid and not with user oracle) but the wallet file was not readable by user grid:
+But in my case it was not workingi and there was nothing in the listener.log. It turned out that in an Oracle restart set-up the listener is started by operating system grid (assuming one installed grid with os user grid and not with user oracle) but the wallet file was not readable by user grid:
 
 
 ```
