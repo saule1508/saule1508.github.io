@@ -4,15 +4,15 @@ title: provision centos 7 guest on libvirt
 published: false
 ---
 
-Since I am making my lab based on KVM (I have a linux host), I wanted a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to creating a VM and attach the Centos DVD, then boot it and go through the installer. It is ok but there is a faster and an easier to automate way.
+Since I am making my lab based on KVM (I have a linux host), I wanted a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but there is a faster and an easier to automate way.
 
-The main steps are to download a cloud image of Centos 7 (it is a VM in the familiar qcow format, i.e the qemu copy-on-write format), then change the image to inject some info (your public ssh key typically, so that you can connect to it when it is created. There is good documentation avalaible, so I will just list the commands for future reference
+The main steps are to download a cloud image of Centos 7 (it is a VM in the familiar qcow format, i.e the qemu copy-on-write format), and then use a tool that allow to make a small bootable iso which will inject some info in the image during the first boot.
 
 documentation:
 * https://cloudinit.readthedocs.io/en/latest/topics/examples.html
 * https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/
 
-One does not need to be connected as root on the host. On my lab I am using a user pierre (the user is in the group libvirt).
+I am not sure what requires root access on the host and what not. I try to use my personal user but sometimes I have to sudo. On my host I am using a user pierre (the user is in the group libvirt). Of course a pre-requesiste is to have libvirt installed and running.
 
 1. Download the cloud image. 
 
