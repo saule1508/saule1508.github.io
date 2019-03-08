@@ -202,7 +202,7 @@ virsh net-dumpxml default --inactive
 We must stop and restart the default network
 ```
 virsh net-destroy default
-virsh net-destroy default
+virsh net-start default
 virsh net-dumpxml default 
 ```
 then we must restart libvirtd
