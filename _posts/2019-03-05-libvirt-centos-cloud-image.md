@@ -109,7 +109,7 @@ To have a static IP configured, I added some hacking in the runcmd section in th
 
 Of course adapt the hostname to your need, in this example it is pg01
 
-About the *chpasswd* section, it is supposed to set a password for root. This is super handy in case of problems because you can log through the console. But for some reason the chpasswd section below does not seem to work anymore (it did work at some point..)
+About the *chpasswd* section, it will set a password for root. This is super handy in case of problems because you can log through the console. But take care that the keyboard for the console might be qwerty and not azerty on first boot...
 
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
@@ -127,6 +127,8 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh-authorized-keys:
       - $(cat $HOME/.ssh/id_rsa.pub)
+cloud_config_modules: 
+  - resolv_conf
 # set timezone for VM
 timezone: Europe/Brussels
 # Remove cloud-init when finished with it
@@ -166,6 +168,11 @@ Now with cloud-utils we can create a bootable iso. The help of this command says
 sudo yum install cloud-utils mkisofs genisoimage
 cd $VMPOOLDIR
 cloud-localds pg01.iso user-data meta-data
+```
+On fedora, I have a strange error image "genisoimage is required". However dns install genisoimage will do nothing because mkisofs is already installed and supposedly mkisofs is a new name for genisoimage. To make it work I created a symlink from mkisofs to genisoimage
+
+```bash
+ln -s /usr/bin/mkisofs /usr/bin/genisoimage
 ```
 
 With this iso and the cloud image we downloaded, we will be able to provision our new guest. 
