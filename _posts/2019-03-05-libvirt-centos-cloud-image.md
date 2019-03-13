@@ -16,7 +16,7 @@ Some additional good documentation:
 
 ## Install KVM and libvirt
 
-libvirt is normally installed by default on Centos 7, if not [https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/]
+libvirt is normally installed by default on Centos 7, if not check for example <https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/>
 
 You don't need to use root to create guest VM's or to use virsh, you can keep your own user but make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
 
