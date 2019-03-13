@@ -16,7 +16,7 @@ documentation:
 
 NB: Normally one can do everything with a non-root user as long that the user is in the group libvirt and the env variable LIBVIRT_DEFAULT_URI is set (see below).
 
-1. Install KVM and libvirt
+## Install KVM and libvirt
 
 libvirt is normally installed by default on Centos 7, if not https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/
 
@@ -24,9 +24,9 @@ You don't need to become root to create guest virtual machines, you can keep you
 
 * add user to group libvirt
 
-In my case I am using user oracle, so:
+In my case I am using user pierre, so:
 ```
-sudo usermod -G libvirt -a oracle
+sudo usermod -G libvirt -a pierre
 ```
 
 * add environment variable LIBVIRT_DEFAULT_URI
@@ -36,10 +36,10 @@ export LIBVIRT_DEFAULT_URI=qemu:///system
 ```
 and add it to your profile also
 ```bash
-echo export LIBVIRT_DEFAULT_URI=qemu:///system >> /home/oracle/.bash_profile
+echo export LIBVIRT_DEFAULT_URI=qemu:///system >> ~/.bash_profile
 ```
 
-2. Download the cloud image. 
+## Download the cloud image. 
 
 This is fast because the image is small (895M).
 
@@ -78,12 +78,12 @@ sudo mkdir $VMPOOLDIR
 sudo chown pierre:pierre $VMPOOLDIR
 virsh pool-create-as --name pg01 --type dir --target $$VMPOOLDIR
 ```
-3. Prepare the iso
+
+## Prepare the iso
 
 we need to create two files called user-data and meta-data, those two files will be put in the iso. 
 
-Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. To have a default network config that is using DHCP to get an IP, remove this section and a few line from the file user-data as well (see below). 
-
+Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or prefer to configure it yourself after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
 
 ```bash
 cat > $VMPOOLDIR/meta-data <<EOF
@@ -105,7 +105,7 @@ ssh-keygen -t rsa
 ```
 the public key will he injected in the cloud image, so that you will be able to log on from the host via ssh. 
 
-To have the static IP configured, I added some hacking in the runcmd section below. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file, but it did not work. The commands ifdown/ifup comes from red-hat documentation (workaround for a bug ?). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except first), remove also the DNS and resolv_conf settings below.
+To have the static IP configured, I added some hacking in the runcmd section below. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file, but it did not work. The commands ifdown/ifup comes from red-hat documentation (workaround for a bug ?). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings below.
 
 Of course adapt the hostname to your need...
 
@@ -127,11 +127,6 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh-authorized-keys:
       - $(cat $HOME/.ssh/id_rsa.pub)
-# not sure I need to list config modules or not
-cloud_config_modules:
-  - resolv_conf
-  - runcmd
-  - timezone      
 # set timezone for VM
 timezone: Europe/Brussels
 # Remove cloud-init when finished with it
@@ -175,18 +170,22 @@ cloud-localds pg01.iso user-data meta-data
 
 With this iso and the cloud image we downloaded, we will be able to provision our new guest. 
 
-Copy the downloaded cloud image in the pool. I do that using qemu-img convert but a simple copy is OK
+## create a new guest
+
+First copy the downloaded cloud image in the pool. I do that using qemu-img convert but a simple copy is OK
 ```bash
 qemu-img convert -O qcow2 /data1/downloads/CentOS-7-x86_64-GenericCloud.qcow2 $VMPOOLDIR/pg01.qcow2
 ```
+
+then run virt-install to create the VM
 
 ```bash
 virt-install --name pg01 --memory 1024 --vcpus 2 --disk $VMPOOLDIR/pg01.qcow2,device=disk,bus=virtio --os-type generic --os-variant centos7.0 --virt-type kvm --network network=default,model=virtio --cdrom $VMPOOLDIR/pg01.iso 
 ```
 
-If you do not specify --noautoconsole in the virt-install, the program tries to start virt-viewer so that one can see the progress of the installation. When at the end, it prompts for a login, reboot the VM. If you have --noautoconsole then just wait long enough (a few minutes, it is very fast)
+If you do not specify --noautoconsole in the virt-install command, the program tries to start virt-viewer so that one can see the progress of the installation. When at the end, it prompts for a login, reboot the VM. If you have --noautoconsole then just wait long enough (a few minutes, it is very fast)
 
-If you specified a static IP, then you know the IP otherwise if using dhcp then to get the IP of the new guest:
+If you specified a static IP, then you know the IP otherwise you can get the IP of the new guest:
 
 ```bash
 virsh domifaddr pg01
@@ -270,22 +269,18 @@ In /etc/hosts on the host
 192.168.122.10 pg01.localnet
 ```
 
-4. Add a disk and create a volume group
+## LVM 
 
-first create a disk
+first create a disk on the host
 
 ```bash
 virsh vol-create-as --pool pg01 --name pg01-disk1.qcow2 --capacity 40G --allocation 10G --format qcow2
 ```
-
-allocate it to the VM
-
+and allocate it to the VM
 ```bash
 virsh attach-disk --domain pg01 --source /u01/virt/pg01/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
 ```
-
-get into the VM and set-up the volume group, the logical volume and the file system
-
+Then get into the VM and set-up the volume group, the logical volume and the file system
 ```bash
 # as user root
 yum install lvm2
@@ -306,3 +301,5 @@ then mount the filesystem
 ```bash
 mount /u01
 ```
+
+The VM can be cloned, you can take snapshot, ... you can do pretty everything via the command line. I'll document that in a next post.
