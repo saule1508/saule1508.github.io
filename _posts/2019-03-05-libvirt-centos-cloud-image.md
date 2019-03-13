@@ -69,7 +69,7 @@ qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 20G
 ```
 If we look again the info, the virtual size is 20G but the file size did not change (895M)
 
-Next I create a storage pool for the new guest (just a directory on the host). I use an env variable to point to the directory in the remainder of this text.
+Next I create a storage pool for the new guest (just a directory on the host). I use an env variable to point to the directory in the remainder of this text. Change pg01 by whatever you decided for your new VM name.
 
 ```bash
 export VMPOOLDIR=/data2/virtpool/pg01
@@ -80,7 +80,7 @@ virsh pool-create-as --name pg01 --type dir --target $VMPOOLDIR
 
 ## Prepare the iso
 
-we need to create two files called user-data and meta-data, those two files will be put in the iso. 
+we need to create two files called user-data and meta-data, those two files will be put in the iso. Again change pg01 as suits you.
 
 Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or if you prefer to configure it after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
 
