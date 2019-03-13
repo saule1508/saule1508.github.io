@@ -11,8 +11,8 @@ I will document step by step how to create a Centos guest from a cloud image, al
 Some additional good documentation:
 * <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
 * [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
-* [https://packetpushers.net/cloud-init-demystified] (not up-to-date but explains the concept well)
-* [https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm]
+* <https://packetpushers.net/cloud-init-demystified> (not up-to-date but explains the concept well)
+* <https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm>
 
 ## Install KVM and libvirt
 
