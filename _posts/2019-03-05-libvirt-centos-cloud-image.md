@@ -9,7 +9,7 @@ I am making my lab at home based on KVM (I have a Fedora linux host) and I need 
 I will document step by step how to create a Centos guest from a cloud image, all at the command line. The guest creation is very fast and easy to automate.
 
 Some additional good documentation:
-* [https://cloudinit.readthedocs.io/en/latest/topics/examples.html]
+* <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
 * [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
 * [https://packetpushers.net/cloud-init-demystified] (not up-to-date but explains the concept well)
 * [https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm]
