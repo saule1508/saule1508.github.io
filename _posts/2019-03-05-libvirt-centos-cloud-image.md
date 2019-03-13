@@ -1,14 +1,14 @@
 ---
 layout: post
-title: provision centos 7 guest on libvirt
+title: Clout-init to create centos 7 guests on KVM
 published: true
 ---
 
-I am making my lab at home based on KVM (I have a Fedora linux host) and I need a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we'll have our new guest centos VM. 
+I wanted a quick way to provision a Centos VM in my Lab at home (Fedora host). Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes too long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we have a new guest ready. Furthermore this can be automated because everything is done at the command line. 
 
-I will document step by step how to create a Centos guest from a cloud image, all at the command line. The guest creation is very fast and easy to automate.
+I will document step by step how to create a Centos guest from a cloud image, all at the command line so that the guest creation is very fast and easy to automate.
 
-Some additional good documentation:
+Some additional documentation:
 * <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
 * [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
 * <https://packetpushers.net/cloud-init-demystified> (not up-to-date but explains the concept well)
@@ -16,7 +16,7 @@ Some additional good documentation:
 
 ## Install KVM and libvirt
 
-libvirt is normally installed by default on Centos 7, if not check for example <https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/>
+libvirt is normally installed by default on Fedora and on Centos 7, if not check for example <https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/>
 
 You don't need to use root to create guest VM's or to use virsh, you can keep your own user but make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
 
