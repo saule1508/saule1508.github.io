@@ -14,7 +14,7 @@ documentation:
 * https://packetpushers.net/cloud-init-demystified/ (not up-to-date but explains the concept well)
 * https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/
 
-NB: I am not sure what requires root access on the host and what not. I use my non-root user (this use is in the group libvirt) but sometimes I have to sudo. Of course a pre-requesiste is to have libvirt installed and running.
+NB: Normally one can do everything with a non-root user as long that the user is in the group libvirt and the env variable LIBVIRT_DEFAULT_URI is set (see below).
 
 1. Install KVM and libvirt
 
@@ -34,12 +34,12 @@ sudo usermod -G libvirt -a oracle
 ```bash
 export LIBVIRT_DEFAULT_URI=qemu:///system
 ```
-and add it to your profile
+and add it to your profile also
 ```bash
 echo export LIBVIRT_DEFAULT_URI=qemu:///system >> /home/oracle/.bash_profile
 ```
 
-1. Download the cloud image. 
+2. Download the cloud image. 
 
 This is fast because the image is small (895M).
 
@@ -78,8 +78,11 @@ sudo mkdir $VMPOOLDIR
 sudo chown pierre:pierre $VMPOOLDIR
 virsh pool-create-as --name pg01 --type dir --target $$VMPOOLDIR
 ```
+3. Prepare the iso
 
-we need to create two files called user-data and meta-data, those two files will be put in the iso. Since I like to have static IP for my guest, I include the section network-interfaces in the meta-data file. If you prefer to have a default network config, using DHCP, don't add this section. 
+we need to create two files called user-data and meta-data, those two files will be put in the iso. 
+
+Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. To have a default network config that is using DHCP to get an IP, remove this section and a few line from the file user-data as well (see below). 
 
 
 ```bash
@@ -93,9 +96,6 @@ network-interfaces: |
   netmask 255.255.255.0
   broadcast 192.168.122.255
   gateway 192.168.122.1
-bootcmd:
-  - ifdown eth0
-  - ifup eth0
 EOF
 ```
 Before doing the next step, make sure you have a ssh keys pair in your home directory (subdirectory .ssh). If not the case generate the key pair now
@@ -105,7 +105,11 @@ ssh-keygen -t rsa
 ```
 the public key will he injected in the cloud image, so that you will be able to log on from the host via ssh. 
 
-Note that in the meta-data file I set up information to configure the network interface, as I prefer to have a static IP. But this requires some hacking in the runcmd section below, in user-data: maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in meta-data but I don't know how. The ifdown/ifup comes from red-hat documentation (workaround for a bug). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except first), remove also the DNS and resolv_conf settings below.
+To have the static IP configured, I added some hacking in the runcmd section below. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file, but it did not work. The commands ifdown/ifup comes from red-hat documentation (workaround for a bug ?). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except first), remove also the DNS and resolv_conf settings below.
+
+Of course adapt the hostname to your need...
+
+See the chpasswd section, to set a password for root. This is super handy in case of problems because you can log through the console. But for some reason the chpasswd section below does not seem to work anymore (it did work at some point..)
 
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
@@ -180,7 +184,7 @@ qemu-img convert -O qcow2 /data1/downloads/CentOS-7-x86_64-GenericCloud.qcow2 $V
 virt-install --name pg01 --memory 1024 --vcpus 2 --disk $VMPOOLDIR/pg01.qcow2,device=disk,bus=virtio --os-type generic --os-variant centos7.0 --virt-type kvm --network network=default,model=virtio --cdrom $VMPOOLDIR/pg01.iso 
 ```
 
-If you do not specify --noautoconsole in the virt-install, the program tries to start virt-viewer so that one can see the progress of the installation. 
+If you do not specify --noautoconsole in the virt-install, the program tries to start virt-viewer so that one can see the progress of the installation. When at the end, it prompts for a login, reboot the VM. If you have --noautoconsole then just wait long enough (a few minutes, it is very fast)
 
 If you specified a static IP, then you know the IP otherwise if using dhcp then to get the IP of the new guest:
 
@@ -266,6 +270,39 @@ In /etc/hosts on the host
 192.168.122.10 pg01.localnet
 ```
 
+4. Add a disk and create a volume group
 
+first create a disk
 
+```bash
+virsh vol-create-as --pool pg01 --name pg01-disk1.qcow2 --capacity 40G --allocation 10G --format qcow2
+```
 
+allocate it to the VM
+
+```bash
+virsh attach-disk --domain pg01 --source /u01/virt/pg01/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
+```
+
+get into the VM and set-up the volume group, the logical volume and the file system
+
+```bash
+# as user root
+yum install lvm2
+pvcreate /dev/vdb
+vgcreate vg01 /dev/vdb
+lvcreate -l100%FREE -n lv_01 vg01
+mkfs -t xfs /dev/vg01/lv_01
+mkdir /u01
+```
+
+edit /etc/fstab and add
+```
+/dev/vg01/lv_01 /u01 xfs defaults 0 0
+```
+
+then mount the filesystem
+
+```bash
+mount /u01
+```
