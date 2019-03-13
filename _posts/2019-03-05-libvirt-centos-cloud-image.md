@@ -1,7 +1,7 @@
 ---
 layout: post
 title: provision centos 7 guest on libvirt
-published: false
+published: true
 ---
 
 I am making my lab at home based on KVM (I have a Fedora linux host) and I need a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it is not possible to automate and furthermore there is a faster way: we can download a cloud image, boot a VM based on it and very quickly we'll have our new guest centos VM. No PXE boot/kickstart needed.
