@@ -9,18 +9,16 @@ I am making my lab at home based on KVM (I have a Fedora linux host) and I need 
 The main steps are to download a cloud image of Centos 7 (it is a VM in the familiar qcow format, i.e the qemu copy-on-write format), and then use a tool that allow to make a small bootable iso which will inject some info in the image during the first boot.
 
 documentation:
-* https://cloudinit.readthedocs.io/en/latest/topics/examples.html
-* https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init
-* https://packetpushers.net/cloud-init-demystified/ (not up-to-date but explains the concept well)
-* https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/
-
-NB: Normally one can do everything with a non-root user as long that the user is in the group libvirt and the env variable LIBVIRT_DEFAULT_URI is set (see below).
+* [https://cloudinit.readthedocs.io/en/latest/topics/examples.html]
+* [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
+* [https://packetpushers.net/cloud-init-demystified] (not up-to-date but explains the concept well)
+* [https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm]
 
 ## Install KVM and libvirt
 
-libvirt is normally installed by default on Centos 7, if not https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/
+libvirt is normally installed by default on Centos 7, if not [https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/]
 
-You don't need to become root to create guest virtual machines, you can keep your own user but then do the following
+You don't need to become root to create guest virtual machines, you can keep your own user but then make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
 
 * add user to group libvirt
 
@@ -28,6 +26,7 @@ In my case I am using user pierre, so:
 ```
 sudo usermod -G libvirt -a pierre
 ```
+nb: this requires login on again
 
 * add environment variable LIBVIRT_DEFAULT_URI
 
@@ -53,7 +52,7 @@ get info about the size (file size and virtual size)
 ```bash
 qemu-img info CentOS-7-x86_64-GenericCloud.qcow2
 ```
-As you can see the image the virtual size is 8.0G
+As you can see the image virtual size is 8.0G but the disj size is only 895M
 ```
 image: CentOS-7-x86_64-GenericCloud.qcow2
 file format: qcow2
@@ -63,20 +62,20 @@ cluster_size: 65536
 Format specific information:
     compat: 0.10
 ```
-I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger / partition
+I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger root partition in my nez guest.
 
 ```
-qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 50G
+qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 20G
 ```
- If we look again the info, the virtual size is 50G but the file size did not change (895M)
+If we look again the info, the virtual size is 20G but the file size did not change (895M)
 
-create a libvirt storage pool for the new guest, of course adapt the directory to your system. I use an env variable to point to the directory
+Next I create a storage pool for the new guest, just a directory for the new guest. Of course adapt the directory to your system. I use an env variable to point to the directory in the remainder of this text.
 
 ```bash
 export VMPOOLDIR=/data2/virtpool/pg01
 sudo mkdir $VMPOOLDIR
 sudo chown pierre:pierre $VMPOOLDIR
-virsh pool-create-as --name pg01 --type dir --target $$VMPOOLDIR
+virsh pool-create-as --name pg01 --type dir --target $VMPOOLDIR
 ```
 
 ## Prepare the iso
@@ -98,18 +97,19 @@ network-interfaces: |
   gateway 192.168.122.1
 EOF
 ```
-Before doing the next step, make sure you have a ssh keys pair in your home directory (subdirectory .ssh). If not the case generate the key pair now
+The second file is user-data. In this file I will reference my public key, so make sure to have a ssh keys pair in your home directory (subdirectory .ssh). If not the case generate the key pair now with ssh-keygen.
 
 ```
 ssh-keygen -t rsa
 ```
-the public key will he injected in the cloud image, so that you will be able to log on from the host via ssh. 
 
-To have the static IP configured, I added some hacking in the runcmd section below. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file, but it did not work. The commands ifdown/ifup comes from red-hat documentation (workaround for a bug ?). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings below.
+the public key in $HOME/.ssh/id_rsa.pub will be injected in the guest, so that you will be able to log on from the host via ssh. 
 
-Of course adapt the hostname to your need...
+To have a static IP configured, I added some hacking in the runcmd section in the user-data file. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file above, but it did not work. The commands ifdown/ifup in the runcmd section come from red-hat documentation (workaround for a bug ?). But if you don't need a static IP, remove the network-interfaces section from meta-data and remove lines from section runcmd below (all lines except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings.
 
-See the chpasswd section, to set a password for root. This is super handy in case of problems because you can log through the console. But for some reason the chpasswd section below does not seem to work anymore (it did work at some point..)
+Of course adapt the hostname to your need, in this example it is pg01
+
+About the *chpasswd* section, it is supposed to set a password for root. This is super handy in case of problems because you can log through the console. But for some reason the chpasswd section below does not seem to work anymore (it did work at some point..)
 
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
@@ -153,14 +153,14 @@ ssh_genkeytypes: ['rsa', 'ecdsa']
 # in cloud.cfg in the template (which is centos for CentOS cloud images)
 ssh_authorized_keys:
   - ssh-rsa $(cat $HOME/.ssh/id_rsa.pub)
-# useful so that we can logon from the console should ssh not be available
+# So that we can logon from the console should ssh not be available
 chpasswd:
   list: |
     root:password
   expire: False  
 EOF
 ```
-Now with cloud-utils we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". At the end it uses user-data and meta-data to produce an iso with which we can boot our cloud image.
+Now with cloud-utils we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". Not sure what this means, but basically it uses user-data and meta-data to produce an iso with which we can boot our cloud image so that cloud-init will do its job at first boot.
 
 ```bash
 sudo yum install cloud-utils mkisofs genisoimage
