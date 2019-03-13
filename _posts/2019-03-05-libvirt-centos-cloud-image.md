@@ -285,7 +285,7 @@ virsh vol-create-as --pool pg01 --name pg01-disk1.qcow2 --capacity 40G --allocat
 ```
 and allocate it to the VM
 ```bash
-virsh attach-disk --domain pg01 --source /u01/virt/pg01/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
+virsh attach-disk --domain pg01 --source $VMPOOLDIR/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
 ```
 Then get into the VM and set-up the volume group, the logical volume and the file system
 ```bash
