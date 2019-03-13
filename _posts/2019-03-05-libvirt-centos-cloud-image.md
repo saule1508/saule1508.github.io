@@ -4,11 +4,11 @@ title: provision centos 7 guest on libvirt
 published: true
 ---
 
-I am making my lab at home based on KVM (I have a Fedora linux host) and I need a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it is not possible to automate and furthermore there is a faster way: we can download a cloud image, boot a VM based on it and very quickly we'll have our new guest centos VM. No PXE boot/kickstart needed.
+I am making my lab at home based on KVM (I have a Fedora linux host) and I need a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we'll have our new guest centos VM. 
 
-The main steps are to download a cloud image of Centos 7 (it is a VM in the familiar qcow format, i.e the qemu copy-on-write format), and then use a tool that allow to make a small bootable iso which will inject some info in the image during the first boot.
+I will document step by step how to create a Centos guest from a cloud image, all at the command line. The guest creation is very fast and easy to automate.
 
-documentation:
+Some additional good documentation:
 * [https://cloudinit.readthedocs.io/en/latest/topics/examples.html]
 * [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
 * [https://packetpushers.net/cloud-init-demystified] (not up-to-date but explains the concept well)
@@ -18,7 +18,7 @@ documentation:
 
 libvirt is normally installed by default on Centos 7, if not [https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/]
 
-You don't need to become root to create guest virtual machines, you can keep your own user but then make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
+You don't need to use root to create guest VM's or to use virsh, you can keep your own user but make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
 
 * add user to group libvirt
 
@@ -52,7 +52,7 @@ get info about the size (file size and virtual size)
 ```bash
 qemu-img info CentOS-7-x86_64-GenericCloud.qcow2
 ```
-As you can see the image virtual size is 8.0G but the disj size is only 895M
+As you can see the image virtual size is 8.0G but the disk size is only 895M
 ```
 image: CentOS-7-x86_64-GenericCloud.qcow2
 file format: qcow2
@@ -62,14 +62,14 @@ cluster_size: 65536
 Format specific information:
     compat: 0.10
 ```
-I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger root partition in my nez guest.
+I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger root partition in my new guest.
 
 ```
 qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 20G
 ```
 If we look again the info, the virtual size is 20G but the file size did not change (895M)
 
-Next I create a storage pool for the new guest, just a directory for the new guest. Of course adapt the directory to your system. I use an env variable to point to the directory in the remainder of this text.
+Next I create a storage pool for the new guest (just a directory on the host). I use an env variable to point to the directory in the remainder of this text.
 
 ```bash
 export VMPOOLDIR=/data2/virtpool/pg01
@@ -82,7 +82,7 @@ virsh pool-create-as --name pg01 --type dir --target $VMPOOLDIR
 
 we need to create two files called user-data and meta-data, those two files will be put in the iso. 
 
-Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or prefer to configure it yourself after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
+Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or if you prefer to configure it after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
 
 ```bash
 cat > $VMPOOLDIR/meta-data <<EOF
@@ -97,7 +97,7 @@ network-interfaces: |
   gateway 192.168.122.1
 EOF
 ```
-The second file is user-data. In this file I will reference my public key, so make sure to have a ssh keys pair in your home directory (subdirectory .ssh). If not the case generate the key pair now with ssh-keygen.
+The second file is user-data. In this file I will reference my public key, so make sure to have a ssh keys pair in the directory HOME/.ssh. You can generate a key pair with ssh-keygen.
 
 ```
 ssh-keygen -t rsa
@@ -105,7 +105,7 @@ ssh-keygen -t rsa
 
 the public key in $HOME/.ssh/id_rsa.pub will be injected in the guest, so that you will be able to log on from the host via ssh. 
 
-To have a static IP configured, I added some hacking in the runcmd section in the user-data file. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file above, but it did not work. The commands ifdown/ifup in the runcmd section come from red-hat documentation (workaround for a bug ?). But if you don't need a static IP, remove the network-interfaces section from meta-data and remove lines from section runcmd below (all lines except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings.
+To have a static IP configured, I added some hacking in the runcmd section in the user-data file. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file above ? But it did not work. The commands ifdown/ifup in the runcmd section come from red-hat documentation (workaround for a bug ?). If you don't need a static IP, remove the network-interfaces section from meta-data and remove lines from section runcmd below (all lines except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings.
 
 Of course adapt the hostname to your need, in this example it is pg01
 
@@ -262,7 +262,7 @@ USERCTL=no
 
 3. add vm in /etc/hosts on the host
 
-With libvird on the host, there is dnsmask server automatically started so that the content of the /etc/hosts on the host will be made available to the guests via DNS. This is great for vm's because VM's can connect to each other via DNS.
+With libvird on the host, there is a dnsmask server automatically started so that the content of the /etc/hosts on the host will be made available to the guests via DNS. This is great because VM's can connect to each other via DNS.
 
 In /etc/hosts on the host 
 ```
