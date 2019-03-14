@@ -1,26 +1,27 @@
 ---
 layout: post
-title: provision centos 7 guest on libvirt
+title: Cloud images to automate guest provisioning with KVM
 published: true
 ---
 
-I am making my lab at home based on KVM (I have a Fedora linux host) and I need a quick way to provision a Centos VM. Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it is not possible to automate and furthermore there is a faster way: we can download a cloud image, boot a VM based on it and very quickly we'll have our new guest centos VM. No PXE boot/kickstart needed.
+I am making my lab at home based on KVM (I have a Fedora linux host but this was tested on Centos host also) and I need a quick way to provision a Centos VM. 
 
-The main steps are to download a cloud image of Centos 7 (it is a VM in the familiar qcow format, i.e the qemu copy-on-write format), and then use a tool that allow to make a small bootable iso which will inject some info in the image during the first boot.
+Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it is not possible to automate and it is long. It turns out there is a much faster way, that can be automated easily, by using a cloud image (published by Centos)
 
-documentation:
-* https://cloudinit.readthedocs.io/en/latest/topics/examples.html
-* https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init
-* https://packetpushers.net/cloud-init-demystified/ (not up-to-date but explains the concept well)
-* https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/
+I will describe step by step my process to create a Centos guest via the command line (not gui needed)
 
-NB: Normally one can do everything with a non-root user as long that the user is in the group libvirt and the env variable LIBVIRT_DEFAULT_URI is set (see below).
+Some helpful documentation:
+* [https://cloudinit.readthedocs.io/en/latest/topics/examples.html]
+* [https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init]
+* [https://packetpushers.net/cloud-init-demystified/] (not up-to-date but explains the concept well)
+* [https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/]
 
-## Install KVM and libvirt
+
+## Install KVM and libvirt, config user
 
 libvirt is normally installed by default on Centos 7, if not https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/
 
-You don't need to become root to create guest virtual machines, you can keep your own user but then do the following
+You don't need to become root to use libvirt and to create guests, but with a non-root user first add it to the libvirt group and set an env variable called LIBVIRT_DEFAULT_URI
 
 * add user to group libvirt
 
@@ -49,11 +50,11 @@ cd /data1/downloads
 wget https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
 ```
 
-get info about the size (file size and virtual size)
+We can get info about the image
 ```bash
 qemu-img info CentOS-7-x86_64-GenericCloud.qcow2
 ```
-As you can see the image the virtual size is 8.0G
+As we can see the virtual size is 8.0G, this will be the size of the root partition of our guest if we don't resize it.
 ```
 image: CentOS-7-x86_64-GenericCloud.qcow2
 file format: qcow2
@@ -66,24 +67,24 @@ Format specific information:
 I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger / partition
 
 ```
-qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 50G
+qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 20G
 ```
- If we look again the info, the virtual size is 50G but the file size did not change (895M)
+If we look again the info, the virtual size is 20G but the file size did not change (895M)
 
-create a libvirt storage pool for the new guest, of course adapt the directory to your system. I use an env variable to point to the directory
+Now I create a storage pool for the new guest, of course adapt the directory to your system. I use an env variable to point to the directory in the remaining of the text. I name the storage pool the same as my new guest will be, pg01.
 
 ```bash
 export VMPOOLDIR=/data2/virtpool/pg01
 sudo mkdir $VMPOOLDIR
 sudo chown pierre:pierre $VMPOOLDIR
-virsh pool-create-as --name pg01 --type dir --target $$VMPOOLDIR
+virsh pool-create-as --name pg01 --type dir --target $VMPOOLDIR
 ```
 
-## Prepare the iso
+## Prepare the iso for cloud-init
 
-we need to create two files called user-data and meta-data, those two files will be put in the iso. 
+we need to create two files called user-data and meta-data that will be in the iso.
 
-Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or prefer to configure it yourself after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
+Since I like to have a static IP for my guests, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or prefer to configure it manually after), remove this section and remove also a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
 
 ```bash
 cat > $VMPOOLDIR/meta-data <<EOF
