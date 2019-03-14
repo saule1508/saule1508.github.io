@@ -1,27 +1,25 @@
 ---
 layout: post
-title: Cloud images to automate guest provisioning with KVM
+title: Clout-init to create centos 7 guests on KVM
 published: true
 ---
 
-I am making my lab at home based on KVM (I have a Fedora linux host but this was tested on Centos host also) and I need a quick way to provision a Centos VM. 
+I wanted a quick way to provision a Centos VM in my Lab at home (Fedora host). Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes too long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we have a new guest ready. Furthermore this can be automated because everything is done at the command line. 
 
-Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it is not possible to automate and it is long. It turns out there is a much faster way, that can be automated easily, by using a cloud image (published by Centos)
+I will document step by step how to create a Centos guest from a cloud image, all at the command line so that the guest creation is very fast and easy to automate. My guest will be called pg01 (I will use it for postgres), of course change occurences of pg01 in this document to what suits you.
 
-I will describe step by step my process to create a Centos guest via the command line (not gui needed)
-
-Some helpful documentation:
-* [https://cloudinit.readthedocs.io/en/latest/topics/examples.html]
-* [https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init]
-* [https://packetpushers.net/cloud-init-demystified/] (not up-to-date but explains the concept well)
-* [https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm/]
+Some additional documentation:
+* <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
+* [red-hat clout_init doc](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_atomic_host/7/html/installation_and_configuration_guide/setting_up_cloud_init)
+* <https://packetpushers.net/cloud-init-demystified> (not up-to-date but explains the concept well)
+* <https://www.cyberciti.biz/faq/create-vm-using-the-qcow2-image-file-in-kvm>
 
 
 ## Install KVM and libvirt, config user
 
-libvirt is normally installed by default on Centos 7, if not https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/
+libvirt is normally installed by default on Fedora and on Centos 7, if not check for example <https://www.linuxtechi.com/install-kvm-hypervisor-on-centos-7-and-rhel-7/>
 
-You don't need to become root to use libvirt and to create guests, but with a non-root user first add it to the libvirt group and set an env variable called LIBVIRT_DEFAULT_URI
+You don't need to use root to create guest VM's or to use virsh, you can keep your own user but make sure to add yourself in the libvirt group and check the env variable LIBVIRT_DEFAULT_URI
 
 * add user to group libvirt
 
@@ -29,6 +27,7 @@ In my case I am using user pierre, so:
 ```
 sudo usermod -G libvirt -a pierre
 ```
+nb: this requires login on again
 
 * add environment variable LIBVIRT_DEFAULT_URI
 
@@ -54,7 +53,7 @@ We can get info about the image
 ```bash
 qemu-img info CentOS-7-x86_64-GenericCloud.qcow2
 ```
-As we can see the virtual size is 8.0G, this will be the size of the root partition of our guest if we don't resize it.
+As you can see the image virtual size is 8.0G but the disk size is only 895M
 ```
 image: CentOS-7-x86_64-GenericCloud.qcow2
 file format: qcow2
@@ -64,14 +63,14 @@ cluster_size: 65536
 Format specific information:
     compat: 0.10
 ```
-I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger / partition
+I prefer to resize the image (the space will not be allocated until it is used) so that I get a bigger root partition in my new guest.
 
 ```
 qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 20G
 ```
 If we look again the info, the virtual size is 20G but the file size did not change (895M)
 
-Now I create a storage pool for the new guest, of course adapt the directory to your system. I use an env variable to point to the directory in the remaining of the text. I name the storage pool the same as my new guest will be, pg01.
+Next I create a storage pool for the new guest (just a directory on the host). I use an env variable to point to the directory in the remainder of this text. Change pg01 by whatever you decided for your new VM name.
 
 ```bash
 export VMPOOLDIR=/data2/virtpool/pg01
@@ -82,9 +81,9 @@ virsh pool-create-as --name pg01 --type dir --target $VMPOOLDIR
 
 ## Prepare the iso for cloud-init
 
-we need to create two files called user-data and meta-data that will be in the iso.
+we need to create two files called user-data and meta-data, those two files will be put in the iso. Again change pg01 as suits you.
 
-Since I like to have a static IP for my guests, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or prefer to configure it manually after), remove this section and remove also a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
+Since I like to have static IP for my guest, I included the section network-interfaces in the meta-data file. If you don't need a fixed IP (or if you prefer to configure it after), remove this section and a few line from the file user-data as well (see below) so that an IP will be assigned via dhcp by libvirt. 
 
 ```bash
 cat > $VMPOOLDIR/meta-data <<EOF
@@ -99,18 +98,19 @@ network-interfaces: |
   gateway 192.168.122.1
 EOF
 ```
-Before doing the next step, make sure you have a ssh keys pair in your home directory (subdirectory .ssh). If not the case generate the key pair now
+The second file is user-data. In this file I will reference my public key, so make sure to have a ssh keys pair in the directory HOME/.ssh. You can generate a key pair with ssh-keygen.
 
 ```
 ssh-keygen -t rsa
 ```
-the public key will he injected in the cloud image, so that you will be able to log on from the host via ssh. 
 
-To have the static IP configured, I added some hacking in the runcmd section below. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file, but it did not work. The commands ifdown/ifup comes from red-hat documentation (workaround for a bug ?). So if you don't need a static IP, remove the network-interfaces section from above and remove all lines from section runcmd below (except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings below.
+the public key in $HOME/.ssh/id_rsa.pub will be injected in the guest, so that you will be able to log on from the host via ssh. 
 
-Of course adapt the hostname to your need...
+To have a static IP configured, I added some hacking in the runcmd section in the user-data file. Maybe there is a way to express that I want NM_CONTROLLED to no and ONBOOT to yes via the network section in the meta-data file above ? But it did not work. The commands ifdown/ifup in the runcmd section come from red-hat documentation (workaround for a bug ?). If you don't need a static IP, remove the network-interfaces section from meta-data and remove lines from section runcmd below (all lines except the first, i.e. keep the remove of cloud-init), remove also the DNS and resolv_conf settings.
 
-See the chpasswd section, to set a password for root. This is super handy in case of problems because you can log through the console. But for some reason the chpasswd section below does not seem to work anymore (it did work at some point..)
+Of course adapt the hostname to your need, in this example it is pg01
+
+About the *chpasswd* section, it will set a password for root. This is super handy in case of problems because you can log through the console. But take care that the keyboard for the console might be qwerty and not azerty on first boot...
 
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
@@ -128,6 +128,8 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh-authorized-keys:
       - $(cat $HOME/.ssh/id_rsa.pub)
+cloud_config_modules: 
+  - resolv_conf
 # set timezone for VM
 timezone: Europe/Brussels
 # Remove cloud-init when finished with it
@@ -154,19 +156,24 @@ ssh_genkeytypes: ['rsa', 'ecdsa']
 # in cloud.cfg in the template (which is centos for CentOS cloud images)
 ssh_authorized_keys:
   - ssh-rsa $(cat $HOME/.ssh/id_rsa.pub)
-# useful so that we can logon from the console should ssh not be available
+# So that we can logon from the console should ssh not be available
 chpasswd:
   list: |
     root:password
   expire: False  
 EOF
 ```
-Now with cloud-utils we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". At the end it uses user-data and meta-data to produce an iso with which we can boot our cloud image.
+Now with cloud-utils we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". Not sure what this means, but basically it uses user-data and meta-data to produce an iso with which we can boot our cloud image so that cloud-init will do its job at first boot.
 
 ```bash
 sudo yum install cloud-utils mkisofs genisoimage
 cd $VMPOOLDIR
 cloud-localds pg01.iso user-data meta-data
+```
+On fedora, I have a strange error image "genisoimage is required". However dns install genisoimage will do nothing because mkisofs is already installed and supposedly mkisofs is a new name for genisoimage. To make it work I created a symlink from mkisofs to genisoimage
+
+```bash
+ln -s /usr/bin/mkisofs /usr/bin/genisoimage
 ```
 
 With this iso and the cloud image we downloaded, we will be able to provision our new guest. 
@@ -263,7 +270,7 @@ USERCTL=no
 
 3. add vm in /etc/hosts on the host
 
-With libvird on the host, there is dnsmask server automatically started so that the content of the /etc/hosts on the host will be made available to the guests via DNS. This is great for vm's because VM's can connect to each other via DNS.
+With libvird on the host, there is a dnsmask server automatically started so that the content of the /etc/hosts on the host will be made available to the guests via DNS. This is great because VM's can connect to each other via DNS.
 
 In /etc/hosts on the host 
 ```
@@ -279,7 +286,7 @@ virsh vol-create-as --pool pg01 --name pg01-disk1.qcow2 --capacity 40G --allocat
 ```
 and allocate it to the VM
 ```bash
-virsh attach-disk --domain pg01 --source /u01/virt/pg01/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
+virsh attach-disk --domain pg01 --source $VMPOOLDIR/pg01-disk1.qcow2 --target vdb --persistent --driver qemu --subdriver qcow2
 ```
 Then get into the VM and set-up the volume group, the logical volume and the file system
 ```bash
