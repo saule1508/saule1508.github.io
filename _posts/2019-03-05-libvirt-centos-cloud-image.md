@@ -163,14 +163,14 @@ chpasswd:
   expire: False  
 EOF
 ```
-Now with cloud-utils we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". Not sure what this means, but basically it uses user-data and meta-data to produce an iso with which we can boot our cloud image so that cloud-init will do its job at first boot.
+Now with cloud-localds we can create a bootable iso. The help of this command says "Create a disk for cloud-init to utilize nocloud". Not sure what this means, but basically it uses user-data and meta-data to produce an iso with which we can boot our cloud image so that cloud-init will do its job at first boot.
 
 ```bash
 sudo yum install cloud-utils mkisofs genisoimage
 cd $VMPOOLDIR
 cloud-localds pg01.iso user-data meta-data
 ```
-On fedora, I have a strange error image "genisoimage is required". However dns install genisoimage will do nothing because mkisofs is already installed and supposedly mkisofs is a new name for genisoimage. To make it work I created a symlink from mkisofs to genisoimage
+On fedora, I have a strange error image saying "genisoimage is required". However "dns install genisoimage" does nothing else than saying "mkisofs is already installed and is last version". My assumption is that mkisofs is a new name for genisoimage but cloud-localds is looking for the old name (I should file a bug report to Fedora). To make it work I created a symlink from mkisofs to genisoimage
 
 ```bash
 ln -s /usr/bin/mkisofs /usr/bin/genisoimage
@@ -188,7 +188,9 @@ qemu-img convert -O qcow2 /data1/downloads/CentOS-7-x86_64-GenericCloud.qcow2 $V
 then run virt-install to create the VM
 
 ```bash
+
 virt-install --name pg01 --memory 1024 --vcpus 2 --disk $VMPOOLDIR/pg01.qcow2,device=disk,bus=virtio --os-type generic --os-variant centos7.0 --virt-type kvm --network network=default,model=virtio --cdrom $VMPOOLDIR/pg01.iso 
+
 ```
 
 If you do not specify --noautoconsole in the virt-install command, the program tries to start virt-viewer so that one can see the progress of the installation. When at the end, it prompts for a login, reboot the VM. If you have --noautoconsole then just wait long enough (a few minutes, it is very fast)
