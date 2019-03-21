@@ -170,7 +170,7 @@ sudo yum install cloud-utils mkisofs genisoimage
 cd $VMPOOLDIR
 cloud-localds pg01.iso user-data meta-data
 ```
-On fedora, I have a strange error image saying "genisoimage is required". However "dns install genisoimage" does nothing else than saying "mkisofs is already installed and is last version". My assumption is that mkisofs is a new name for genisoimage but cloud-localds is looking for the old name (I should file a bug report to Fedora). To make it work I created a symlink from mkisofs to genisoimage
+On fedora, I have a strange error image saying "missing 'genisoimage'.  Required for --filesystem=iso9660.". However the command "dns install genisoimage" does nothing else than saying "mkisofs is already installed and is last version". My assumption is that mkisofs is a new name for genisoimage but cloud-localds is looking for the old name (I should file a bug report to Fedora). To make it work I created a symlink from mkisofs to genisoimage
 
 ```bash
 ln -s /usr/bin/mkisofs /usr/bin/genisoimage
