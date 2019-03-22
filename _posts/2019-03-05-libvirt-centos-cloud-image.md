@@ -112,6 +112,11 @@ Of course adapt the hostname to your need, in this example it is pg01
 
 About the *chpasswd* section, it will set a password for root. This is super handy in case of problems because you can log through the console. But take care that the keyboard for the console might be qwerty and not azerty on first boot...
 
+:warning: On my Fedora host the section *cloud_config_modules* in which I enabled *resolv_conf* resulted in my guest not booting up. So I had to remove it but then /etc/resolv.conf contains wrong information. As a work-around I added a sed in the runcmd section, like this
+```
+  - [ sed, -i, -e, "s/10.0.2.3/192.168.122.1/", /etc/resolv.conf ]
+```
+
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
 #cloud-config
