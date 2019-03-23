@@ -7,6 +7,7 @@ published: true
 I wanted a quick way to provision a Centos VM in my Lab at home (Fedora host). Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes too long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we have a new guest ready. Furthermore this can be automated because everything is done at the command line. 
 
 I will document step by step how to create a Centos guest from a cloud image, all at the command line so that the guest creation is very fast and easy to automate. My guest will be called pg01 (I will use it for postgres), of course change occurences of pg01 in this document to what suits you.
+<!--more-->
 
 Some additional documentation:
 * <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
