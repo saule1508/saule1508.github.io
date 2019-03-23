@@ -5,6 +5,7 @@ published: true
 ---
 
 I have a RAC production setup with a standby database (the standby is single-instance and non-ASM) and I must upgrade it from 12.1.0.1 to 12.1.0.2. 
+<!--more-->
 
 In those case it is important to do a rehearsal and to be able to learn the process, that's why I have set-up a RAC on VMWare ESX. To mirror the production set-up I also added a dataguard (also on ESX). 
 
