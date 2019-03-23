@@ -5,6 +5,7 @@ published: true
 ---
 
 After doing an upgrade from 12.1.0.1 to 12.1.0.2 (previous post), it is time to apply the latest patch set updates. Patching a RAC with a dataguard requires a lot of preparation upfront, it is really worth having a test environment to test it before and get used to all the subtilities of the process.
+<!--more-->
 
 Firt of all head to this document on metalink: [Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1)](Oracle Recommended Patches -- Oracle Database (Doc ID 756671.1))
 
