@@ -5,6 +5,7 @@ published: true
 ---
 
 My company is evaluating splunk as main tool for support (log analysis) and monitoring. Since we are currently using nagios for monitoring, the question was to see if splunk could replace nagios or would rather supplement it.
+<!--more-->
 
 ## Abstract
 
