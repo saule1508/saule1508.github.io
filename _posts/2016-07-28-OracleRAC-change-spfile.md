@@ -5,6 +5,7 @@ published: true
 ---
 
 If you need to change system parameters in a RAC environment, you can of course use the usual alter system command, like for example:
+<!--more-->
 
 ```
 alter system set job_queue_processes=1000 scope=both sid='*';
