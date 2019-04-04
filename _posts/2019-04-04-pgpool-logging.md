@@ -7,7 +7,7 @@ published: true
 This is a quick post to explain logging of pgpool to the journal or to a file
 <!--more-->
 
-# pgpool logging configuration
+## pgpool configuration
 
 In the pgool.conf file (/etc/pgpool-II/pgpool.conf), set the parameter log_destination to 'stderr' and debug_level to 0 (or more if you need)
 
@@ -28,6 +28,9 @@ if you want to correlate the logs with those of postgres, it is easy, for exampl
 ```
 journalctl --unit pgpool --unit postgresql --since -30min
 ```
+
+## systemd unit configuration
+
 
 This said sometimes you need the logs in a flat file, it is also possible. We need to modify the systemd pgpool unit
 
