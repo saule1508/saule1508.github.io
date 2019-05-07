@@ -338,15 +338,80 @@ brw-rw----. 1 grid dba  252, 33 May  6 15:56 /dev/vdc1
 
 This must be done on both servers. Reboot the servers to make sure that the rule is working (if the ownership of the device is taken by grid then it is working)
 
+And the same for /dev/vdd1
 
+## Grid installation
 
+ssh into the server as user grid with X forwarding
 
+```bash
+ssh -X grid@ora01.localnet
+```
 
+create directories for grid installation
 
+```bash
+mkdir -p /u01/app/18.0.0/grid
+mkdir -p /u01/app/grid
+```
 
-and the same for /dev/vdd1
+unzip the installation file into the grid home directory
 
+```bash
+cd /u01/app/18.0.0/grid
+unzip /u01/staging/grid/LINUX.X64_180000_grid_home.zip
+```
 
+now we need to install the cvuqdisk rpm, so that during the grid installation the installer will be able to verify the asm disks visibility. You can locate the cvuqdisk rpm with find
 
+```bash
+find . -name "cvuqdisk*"
+sudo rpm -i ./cv/rpm/cvuqdisk-1.0.10-1.rpm
+```
 
+and now we can run the setup script. 
+
+```bash
+./gridSetup.sh
+```
+
+The X display did not show up at first, I add to log in as root and install those packages (xclock was for testing purpose)
+
+```bash
+yum install xclock xauth
+```
+
+and exit the vm, then log in again as user grid with the -X option
+
+In the Oracle grid installer wizard I answered the following
+
+* Screen 1: Set Up Software Only 
+* Screen 2: add host ora02. Click on setup SSH connectivity (you must provide OS password of grid)
+* Screen 3: dba for ASM admin, asmdba for ASM DBA and asmdba again for ASM Operator
+* Screen 4: for oracle base /u01/app/grid and oracle home /u01/app/18.0.0/grid
+* Screen 5: oraInventory in /u01/app/oraInventory
+* Screen 6: keep default for root scripts execution (you will be prompted)
+* Screen 7: Prerequesite checks. If some are not met fixup scripts can be generated.
+* Screen 8: validate and confirm
+* Screen 9: execute root scripts
+* Screen 10: close
+
+Now run the ./gridSetup.sh against but this time to configure. The reason I did the soft. install before is that if there is an issue during the setup (asm disks not found) and that I need to restart the installer, at least the soft. install part is already done
+
+* Screen 1: Configure for a new cluster
+* Screen 2: Configure a standalone cluster
+* Screen 3: cluster name = orarac, SCAN = orarac-scan, port 1521
+* Screen 4: add host ora02 with virtual host name ora02-vip
+* Screen 5: public interface eth0, ASM | private interface enp8s0
+* Screen 6: Configure ASM using block devices
+* Screen 7: No (no seperate ASM disk group)
+* Screen 8: change the discovery string to /dev/asm-*, then create a disk group DATA with redundancy external
+![ASM disk group](../images/rac_create_asmdg.png)
+* Screen 9: password
+* Screen 10: Do not use IPMI
+* Screen 11: do not register with EM Cloud control
+* Screen 12: keep default (you will be prompted to execute root scripts)
+* Screen 13: Prerequisite checks. Generate a fixup if needed (I had a warning because of a zeroconf check in the network config). I have to ignore the warning /dev/shm mounted as temporary file system.
+* Screen 14: Validate then install
+* Screen 15: execute root script sequentially on each nodes. It will take long on the first node.
 
