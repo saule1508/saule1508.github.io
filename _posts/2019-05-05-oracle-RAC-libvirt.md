@@ -6,20 +6,23 @@ published: false
 
 Setting up an Oracle RAC on virtual machines with libvirt. 
 <!--more-->
-In this post I will go through the different steps to install Oracle grid and set-up a cluster. My host is a fedora and the two guests running oracle will be Centos 7.6 virtual machines. The two small difficulties when setting up a RAC using virtual servers is 
+In this post I will go through the different steps to install Oracle grid and set-up a cluster. My host is a fedora and the two guests running oracle will be Centos 7.6 virtual machines. The two small difficulties when setting up a RAC using virtual servers are:
 
-* setting up the networking
+* setting up the networking (it requires a DNS)
 * setting up the shared storage
 
 But before we need to have a Centos 7.6 VM (base install). Once the VM is ready we will clone it. The final set-up will be the following:
 
-| server | IP's | note |
+| server | Public IP | Private IP |
 | -------|------|------|
-| ora01  | 192.168.122.10 ||
-| ora02  | 192.168.122.11 ||
+| ora01  | 192.168.122.10 |10.0.0.1|
+| ora02  | 192.168.122.11 |10.0.0.2|
 
 Scan IP's: 192.168.122.15, 192.168.122.16, 192.168.122.17 (round-robin DNS)
-Private IP's: there is a dedicated network between ora01 and ora02 dedicated to the interconnect. 
+
+For the private IP's there will be a dedicated virtual network between ora01 and ora02.
+
+For the shared storage, I will use a udev rule to make the disks naming and ownership permanent, the udev rule will use the serial id of the disk which can be assigned when attaching the disk (a file on the host) via virt-manager.
 
 ## creating the guest VM
 
@@ -414,4 +417,52 @@ Now run the ./gridSetup.sh against but this time to configure. The reason I did 
 * Screen 13: Prerequisite checks. Generate a fixup if needed (I had a warning because of a zeroconf check in the network config). I have to ignore the warning /dev/shm mounted as temporary file system.
 * Screen 14: Validate then install
 * Screen 15: execute root script sequentially on each nodes. It will take long on the first node.
+
+When the installation is complete, use asmca (as user grid) to create a second disk group (FRA)
+
+## Database install and creation
+
+For the database, we need to connect as oracle and unzip the file in the oracle home directory (/u01/app/oracle/18.0.0)
+
+```bash
+mkdir -p /u01/app/oracle/product/18.0.0
+cd /u01/app/oracle/product/18.0.0
+unzip /u01/staging/db/LINUX.X64_180000_db_home.zip
+```
+
+You need to create the directory /u01/app/oracle/18.0.0 on ora02 also but you don't need to unzip the file (oracle installer will copy the soft)
+
+Now in a X session you can run the installer
+
+```bash
+cd /u01/app/oracle/product/18.0.0
+./runInstaller
+```
+
+* Step 1. I prefer to select "Set Up software only", then use dbca to create the database.
+* Step 2. Oracle RAC database installation
+* Step 3. Keep both db's selected, let oracle set-up ssh connectivity
+* Step 4. Enterprise edition
+* Step 5. Oracle base is /u01/app/oracle and home is /u01/app/oracle/product/18.0.0
+* Step 6. OS group: dba everywhere.
+* Step 7. Prerequisite Checks. Ignore /dev/shm not mounted in fstab
+* Step 8. Confirm 
+* Step 9. Install
+
+After that we can use dbca to create a database.
+
+```bash
+export PATH=$PATH:/u01/app/oracle/product/18.0.0/bin
+dbca
+```
+
+Create the database as a CDB (myrootdb) and with one PDB (myora). fast recovery area is +FRA. I don't enable archiving (will do it after).
+I prefer to change the db_unique_name parameter, in screen 12, and choose something like brussels (when using dataguard the db_unique_name is important).
+
+## Next steps
+
+Enable archiving, read the doc https://docs.oracle.com/en/database/oracle/oracle-database/12.2/racad/index.html, create a dataguard (can be a single instance database)
+
+I would also investigate the use of the new mechanism Oracle ASM Filter driver (replaces ASMLib) for managing disk devices for ASM. In this post I did use the more linux way of udev rules but it would be good to learn the Oracle way also.
+
 
