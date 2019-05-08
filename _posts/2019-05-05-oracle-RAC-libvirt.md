@@ -98,7 +98,7 @@ start ora02, get into the VM and change the IP by editing the file /etc/sysconfi
 
 ## configure both servers via ansible
 
-My ansible role oracle-grid is in my github project ansible, so the project must be cloned and a playbook must be created that includes the role oracle-grid
+I use ansible to configure the servers: oracle and grid users, linux groups, linux parameters, etc.. I have an ansible role called oracle-grid which I include a playbook. It is in my github project ansible, so the project must be cloned and a playbook must be created that includes the role oracle-grid
 
 ```bash
 git clone https://github.com/saule1508/ansible.git
@@ -112,7 +112,7 @@ ora01 ansible_host=192.168.122.10 ansible_connection=ssh ansible_user=ansible an
 ora02 ansible_host=192.168.122.11 ansible_connection=ssh ansible_user=ansible ansible_become=true ansible_become_user=root
 ```
 
-then my playbook, orarac.yml
+then I create a playbook, orarac.yml, that set a few variables then include the role.
 
 ```
 ---
@@ -130,7 +130,7 @@ then my playbook, orarac.yml
     - oracle-grid
 ```
 
-And now we can run the playbook
+And now we can run the playbook with the inventory file referencing both servers.
 
 ```bash
 ansible-playbook -i orarac.inventory orarac.yml | tee -a ora.log
