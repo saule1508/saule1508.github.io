@@ -148,7 +148,7 @@ The RAC requires a DNS to resolve the scan 3 ip addresses in a round-robin fashi
 So in the /etc/hosts of my host I have put those IP's 
 
 ```
-92.168.122.10  ora01 ora01.localnet
+192.168.122.10  ora01 ora01.localnet
 192.168.122.11  ora02 ora02.localnet
 # VIP those IP's are reserved here and will be assigned by grid
 192.168.122.12  ora01-vip ora01-vip.localnet
@@ -159,7 +159,7 @@ So in the /etc/hosts of my host I have put those IP's
 192.168.122.16  orarac-scan orarac-scan.localnet
 ```
 
-The let's restart the default network
+Then let's restart the default network
 
 ```bash
 virsh net-destroy default 
@@ -196,6 +196,7 @@ GATEWAY=10.0.0.1
 IPADDR=10.0.0.10
 NETMASK=255.255.255.0
 ONBOOT=yes
+HWADDR=<check in the interface or via ip addr>
 TYPE=Ethernet
 USERCTL=no
 NM_CONTROLLED=no
