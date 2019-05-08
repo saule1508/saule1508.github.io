@@ -328,7 +328,7 @@ udevadm test /block/vdc/vdc1
 
 note that in the command we give a path relative to /sys (so /sys/block/vdc/vdc1 becomes /block/vdc/vdc1)
 
-Check the output of the test command. Verify also that the ownership of /dev/vdc1 is now grid:oinstall
+Check the output of the test command. Verify also that the ownership of /dev/vdc1 is now grid:dba
 
 ```bash
 [root@ora01 ~]# ll /dev/vdc*
