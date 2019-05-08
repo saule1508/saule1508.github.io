@@ -4,19 +4,18 @@ title: Oracle RAC with libvirt on Centos 7
 published: true
 ---
 
-Setting up an Oracle RAC on virtual machines with libvirt. 
-<!--more-->
 In this post I will go through the different steps to install Oracle grid and set-up a cluster. My host is a fedora and the two guests running oracle will be Centos 7.6 virtual machines. The two small difficulties when setting up a RAC using virtual servers are:
 
 * setting up the networking (it requires a DNS)
 * setting up the shared storage
+<!--more-->
 
 But before we need to have a Centos 7.6 VM (base install). Once the VM is ready we will clone it. The final set-up will be the following:
 
 | server | Public IP | Private IP |
 | -------|------|------|
-| ora01  | 192.168.122.10 |10.0.0.1|
-| ora02  | 192.168.122.11 |10.0.0.2|
+| ora01  | 192.168.122.10 | 10.0.0.1 |
+| ora02  | 192.168.122.11 | 10.0.0.2 |
 
 Scan IP's: 192.168.122.15, 192.168.122.16, 192.168.122.17 (round-robin DNS)
 
