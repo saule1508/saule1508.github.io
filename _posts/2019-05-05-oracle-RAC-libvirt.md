@@ -293,7 +293,7 @@ fdisk /dev/vdc
 
 then type n (new partition), accept all defaults and type w (write). Do the same with /dev/vdd
 
-We will the serial id that we assigned in the virt-manager interface (orarac01 and orarac02) in order to make a udev rule. Check that serial id is set 
+We will the need the serial id assigned in the virt-manager interface (the serial id were orarac01 and orarac02) in order to make a udev rule. Check that serial id is set 
 
 ```bash
 udevadm info /dev/vdc1
