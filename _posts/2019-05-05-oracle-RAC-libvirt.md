@@ -83,7 +83,7 @@ virsh snapshot-create-as --domain ora01 --name ora01-baseinstall
 virsh start ora01
 ```
 
-The next step is to take care of all pre-requirements for oracle grid and database: install packages, create users, kernel parameters, etc. We can either do it on the first VM and the clone this VM, or we can first clone the VM then use ansible to provision both servers at the same time. Since I am using ansible I will do the second approach
+The next step is to take care of all pre-requirements for oracle grid and database: install packages, create users, kernel parameters, etc. We can either do it on the first VM and when done clone the VM, or we can first clone the VM then use ansible to provision both servers at the same time. Since I am using ansible I will do the second approach
 
 ## clone the VM ora01 to ora02
 
@@ -98,7 +98,7 @@ start ora02, get into the VM and change the IP by editing the file /etc/sysconfi
 
 ## configure both servers via ansible
 
-I use ansible to configure the servers: oracle and grid users, linux groups, linux parameters, etc.. I have an ansible role called oracle-grid which I include a playbook. It is in my github project ansible, so the project must be cloned and a playbook must be created that includes the role oracle-grid
+I use ansible to configure the servers: oracle and grid users, linux groups, linux parameters, etc.. I have an ansible role called oracle-grid which I will include in a playbook and then run the playbook against both servers. The role is in my github project ansible, so the project must be cloned and a playbook must be created that includes the role oracle-grid
 
 ```bash
 git clone https://github.com/saule1508/ansible.git
@@ -135,7 +135,6 @@ And now we can run the playbook with the inventory file referencing both servers
 ```bash
 ansible-playbook -i orarac.inventory orarac.yml | tee -a ora.log
 ```
-
 
 ## Networking
 
