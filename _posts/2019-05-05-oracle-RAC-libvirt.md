@@ -240,7 +240,7 @@ The last bit of configuration is to add a shared storage for both servers.
 Let's first create two files that will be attached as disks to each VM. I will also create a pool (of type directory) to put the files in it
 
 ```bash
-mkdir /data2/virtpool/data2
+mkdir /data2/virtpool/orarac
 virsh pool-create-as --type dir --name orarac --target /data2/virtpool/orarac
 mkdir /data2/virtpool/data2
 virsh pool-create-as --type dir --name orarac --target /data2/virtpool/orarac
