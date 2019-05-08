@@ -21,7 +21,7 @@ For the private IP's there will be a dedicated virtual network between ora01 and
 
 For the shared storage, I will use a udev rule to make the disks naming and ownership permanent, the udev rule will use the serial id of the disk which can be assigned when attaching the disk (the disk is just a file on the host) via virt-manager. When attaching the disk to the VM's we will also check the flag "Shareable".
 
-## creating the guest VM
+## creating the first guest VM
 
 In order to create the first VM I will use the cloud init image provided by Centos. I made a post here on how to use cloud init: [Clout-init to create centos 7 guests on KVM](http://saule1508.github.io/libvirt-centos-cloud-image/). Basically, 
 * create a file ora01.iso using cloud-localds, based on user-data and metadata (take care: on Fedora the module resolv_conf is not working)
@@ -85,7 +85,7 @@ virsh start ora01
 
 The next step is to take care of all pre-requirements for oracle grid and database: install packages, create users, kernel parameters, etc. We can either do it on the first VM and the clone this VM, or we can first clone the VM then use ansible to provision both servers at the same time. Since I am using ansible I will do the second approach
 
-== clone the VM ora01 to ora02
+## clone the VM ora01 to ora02
 
 First make sure ora01 is stopped, because ora02 will initially have the same IP (192.168.122.10). Also create the directory for the storage pool of ora02 and create the pool in virsh.
 
@@ -94,7 +94,9 @@ virsh shutdown ora01
 virt-clone -o ora01 -n ora02  --file /data2/virtpool/ora02/ora02.qcow2 --file  /data2/virtpool/ora02/ora02-disk2.qcow2
 ```
 
-start ora02, get into the VM and change the IP by editing the file /etc/sysconfig/network-scripts/ifcfg-eth0. Also change the hostname with the hostnamectl command.
+start ora02, get into the VM and change the IP by editing the file /etc/sysconfig/network-scripts/ifcfg-eth0. Change also the HWADDR field. Change also the hostname with the hostnamectl command.
+
+## configure both servers via ansible
 
 My ansible role oracle-grid is in my github project ansible, so the project must be cloned and a playbook must be created that includes the role oracle-grid
 
