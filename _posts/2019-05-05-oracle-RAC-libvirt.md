@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Oracle RAC with libvirt on Centos 7
-published: false
+published: true
 ---
 
 Setting up an Oracle RAC on virtual machines with libvirt. 
