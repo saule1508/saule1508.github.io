@@ -242,8 +242,6 @@ Let's first create two files that will be attached as disks to each VM. I will a
 ```bash
 mkdir /data2/virtpool/orarac
 virsh pool-create-as --type dir --name orarac --target /data2/virtpool/orarac
-mkdir /data2/virtpool/data2
-virsh pool-create-as --type dir --name orarac --target /data2/virtpool/orarac
 virsh vol-create-as --pool orarac --name orarac01.raw --capacity 200G --allocation 20G --format raw
 virsh vol-create-as --pool orarac --name orarac02.raw --capacity 200G --allocation 20G --format raw
 ```
@@ -254,7 +252,7 @@ Now we need to attach the storage to both servers. It should be possible to do t
 virsh shutdown ora01
 virsh shutdown ora02
 ```
-In the virt-manager GUI, first do add hardware, then select storage, then select custom storage and choose the file just created. Once added, edit the storage and change the following:
+In the virt-manager GUI, go to ora01 details, then add hardware, then select storage, then select custom storage and choose the file just created. Once added, edit the storage and change the following:
 
 * Shareable: check the option
 * Cache mode: writethrough
