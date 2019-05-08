@@ -12,8 +12,8 @@ In this post I will go through the different steps to install Oracle grid and se
 
 But before we need to have a Centos 7.6 VM (base install). Once the VM is ready we will clone it. The final set-up will be the following:
 
-ora01, public IP 192.168.122.10, private IP (for the interconnect): 10.0.0.1
-ora02, public IP 192.168.122.11, private IP (for the interconnect): 10.0.0.2
+* ora01, public IP 192.168.122.10, private IP (for the interconnect): 10.0.0.1
+* ora02, public IP 192.168.122.11, private IP (for the interconnect): 10.0.0.2
 
 Scan IP's: 192.168.122.15, 192.168.122.16, 192.168.122.17 (round-robin DNS)
 
