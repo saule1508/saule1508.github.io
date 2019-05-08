@@ -12,16 +12,14 @@ In this post I will go through the different steps to install Oracle grid and se
 
 But before we need to have a Centos 7.6 VM (base install). Once the VM is ready we will clone it. The final set-up will be the following:
 
-| server | Public IP | Private IP |
-| -------|------|------|
-| ora01  | 192.168.122.10 | 10.0.0.1 |
-| ora02  | 192.168.122.11 | 10.0.0.2 |
+ora01, public IP 192.168.122.10, private IP (for the interconnect): 10.0.0.1
+ora02, public IP 192.168.122.11, private IP (for the interconnect): 10.0.0.2
 
 Scan IP's: 192.168.122.15, 192.168.122.16, 192.168.122.17 (round-robin DNS)
 
 For the private IP's there will be a dedicated virtual network between ora01 and ora02.
 
-For the shared storage, I will use a udev rule to make the disks naming and ownership permanent, the udev rule will use the serial id of the disk which can be assigned when attaching the disk (a file on the host) via virt-manager.
+For the shared storage, I will use a udev rule to make the disks naming and ownership permanent, the udev rule will use the serial id of the disk which can be assigned when attaching the disk (the disk is just a file on the host) via virt-manager. When attaching the disk to the VM's we will also check the flag "Shareable".
 
 ## creating the guest VM
 
