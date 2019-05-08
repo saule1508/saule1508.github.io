@@ -375,13 +375,13 @@ and now we can run the setup script.
 ./gridSetup.sh
 ```
 
-The X display did not show up at first, I add to log in as root and install those packages (xclock was for testing purpose)
+NB: I could not get the X display to show up at first, I had to log in as root and install those packages (xclock was for testing purpose)
 
 ```bash
 yum install xclock xauth
 ```
 
-and exit the vm, then log in again as user grid with the -X option
+Then I had to exit the vm, then log in again as user grid with the -X option. And it worked. (it is because I started from a cloud image which is a minimal install).
 
 In the Oracle grid installer wizard I answered the following
 
