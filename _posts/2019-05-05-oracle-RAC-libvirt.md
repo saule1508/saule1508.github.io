@@ -458,8 +458,31 @@ I prefer to change the db_unique_name parameter, in screen 12, and choose someth
 
 ## Next steps
 
-Enable archiving, read the doc https://docs.oracle.com/en/database/oracle/oracle-database/12.2/racad/index.html, create a dataguard (can be a single instance database)
+
+### Open the PDB
+
+```sql
+alter pluggable database myora open;
+```
+
+todo: verify it stays open after restart
+
+### Enable archiving
+
+### create a service
+
+```bash
+srvctl add service -service mysrv -database myrootdb -pdb myorasrv -preferred "myrootdb1,myrootdb2"  -verbose
+```
+
+### other commands
+
+### ASM filter driver
 
 I would also investigate the use of the new mechanism Oracle ASM Filter driver (replaces ASMLib) for managing disk devices for ASM. In this post I did use the more linux way of udev rules but it would be good to learn the Oracle way also.
 
+### doc
 
+read the doc https://docs.oracle.com/en/database/oracle/oracle-database/12.2/racad/index.html
+
+### dataguard, create a dataguard (can be a single instance database)
