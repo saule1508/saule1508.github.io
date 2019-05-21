@@ -7,6 +7,7 @@ published: true
 I wanted a quick way to provision a Centos VM in my Lab at home (Fedora host). Until now I was using virt-manager (GUI) to create a VM, attach the Centos DVD, boot it and go through the installer. It is ok but it takes too long. Luckily there is a faster way: download a cloud image, boot a VM based on it and very quickly we have a new guest ready. Furthermore this can be automated because everything is done at the command line. 
 
 I will document step by step how to create a Centos guest from a cloud image, all at the command line so that the guest creation is very fast and easy to automate. My guest will be called pg01 (I will use it for postgres), of course change occurences of pg01 in this document to what suits you.
+<!--more-->
 
 Some additional documentation:
 * <https://cloudinit.readthedocs.io/en/latest/topics/examples.html>
@@ -112,6 +113,11 @@ Of course adapt the hostname to your need, in this example it is pg01
 
 About the *chpasswd* section, it will set a password for root. This is super handy in case of problems because you can log through the console. But take care that the keyboard for the console might be qwerty and not azerty on first boot...
 
+⚠️ On my Fedora host the section *cloud_config_modules* in which I enabled *resolv_conf* resulted in my guest not booting up. So I had to remove it but then /etc/resolv.conf contains wrong information. As a work-around I added a sed in the runcmd section, like this
+```
+  - [ sed, -i, -e, "s/10.0.2.3/192.168.122.1/", /etc/resolv.conf ]
+```
+
 ```bash
 cat > $VMPOOLDIR/user-data <<EOF
 #cloud-config
@@ -170,7 +176,7 @@ sudo yum install cloud-utils mkisofs genisoimage
 cd $VMPOOLDIR
 cloud-localds pg01.iso user-data meta-data
 ```
-On fedora, I have a strange error image saying "genisoimage is required". However "dns install genisoimage" does nothing else than saying "mkisofs is already installed and is last version". My assumption is that mkisofs is a new name for genisoimage but cloud-localds is looking for the old name (I should file a bug report to Fedora). To make it work I created a symlink from mkisofs to genisoimage
+On fedora, I have a strange error image saying "missing 'genisoimage'.  Required for --filesystem=iso9660.". However the command "dns install genisoimage" does nothing else than saying "mkisofs is already installed and is last version". My assumption is that mkisofs is a new name for genisoimage but cloud-localds is looking for the old name (I should file a bug report to Fedora). To make it work I created a symlink from mkisofs to genisoimage
 
 ```bash
 ln -s /usr/bin/mkisofs /usr/bin/genisoimage

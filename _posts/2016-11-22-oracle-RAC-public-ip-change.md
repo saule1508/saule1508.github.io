@@ -5,6 +5,7 @@ published: true
 ---
 
 Today I had to reconfigure a RAC because the public IP's are all changed (ip addresses of the hosts, ip addresses of the VIP and IP's of the scan. Both the VIP and the SCAN changes are quite easy at least if you find the good documents on metalink. There are some blogs also but they are a bit outdated
+<!--more-->
 
 ## Collect info
 

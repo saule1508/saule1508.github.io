@@ -5,6 +5,7 @@ published: true
 ---
 
 In my current company I had to build some rpm's in order to distribute my scripts to the servers we are selling to the customers. Since I am leaving this company I wanted to document this way of working as it might be useful for me in the future...
+<!--more-->
 
 I am using jenkins to kick-off the job, basically jenkins is used to checkout the code then launch a script that will:
 * First create a docker image containings the necessary packages for rpmbuild and my sources;

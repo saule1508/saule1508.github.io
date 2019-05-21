@@ -5,6 +5,7 @@ published: true
 ---
 
 this is inspired from [https://facebook.github.io/create-react-app/docs/proxying-api-requests-in-development#configuring-the-proxy-manually] 
+<!--more-->
 
 
 if you need to proxy your api call in development, it is very easy: just add the following in your package.json

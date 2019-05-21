@@ -18,14 +18,15 @@ html {
 }
 
 body {
-	background: $white;
-  font: 18px/1.4 $helvetica;
+  background: $white;
+  font: 16px/1.2 $helvetica;
   color: $darkGray;
 }
 /* PTI: removed max-width: 740px */ 
+/* changed margin to 10 20 */
 .container {
-  margin: 0 auto;
-  padding: 0 10px;
+  margin: auto auto;
+  padding: 10px 20px;
   width: 100%;
 }
 
