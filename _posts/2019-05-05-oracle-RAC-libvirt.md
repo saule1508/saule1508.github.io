@@ -458,16 +458,73 @@ I prefer to change the db_unique_name parameter, in screen 12, and choose someth
 
 ## Next steps
 
-
 ### Open the PDB
+
+By default the pluggable db is not open, so we need to open it and save its state.
 
 ```sql
 alter pluggable database myora open;
+alter pluggable database all save state;
 ```
 
-todo: verify it stays open after restart
-
 ### Enable archiving
+
+first add one logfiles group for each thread
+
+```sql
+column member format A120
+set lines 240
+select v1.group#,v1.thread#,v1.bytes/(1024*1024),v2.type,v2.member
+from v$log v1 join v$logfile v2 on v1.group# = v2.group#
+order by v1.group#,v1.thread#;
+alter database add logfile thread 1 group 5 ('+DATA','+FRA') size 200M;
+alter database add logfile thread 2 group 6 ('+DATA','+FRA') size 200M;
+```
+
+make enough room for the flash recovery area
+
+```sql
+alter system set db_recovery_file_dest_size=50G scope=both sid='*;
+```
+
+then shutdown the database
+
+```bash
+srvctl stop database -db myrootdb
+srvctl start database -db myrootdb -startoption mount
+```
+
+```sql
+alter database archivelog;
+```
+
+and then restart the database with srvctl
+
+```bash
+srvctl stop database -db myrootdb
+srvctl start database -db myrootdb
+```
+
+now that archiving is enabled, we need a backup script that also cleans the older archivelog, otherwise the disk will fill in.
+
+first check configuration of rman
+
+```bash
+rman target /
+show all;
+```
+
+* retention policy to redundancy 1
+* controlfile autobackup on
+
+```bash
+cat <<EOF > /home/oracle/rman_backup.rman
+backup database with archivelog;
+delete archivelog all completed before 'trunc(sysdate)';
+EOF
+rman target / @/home/oracle/rman_backup.rman 
+```
+
 
 ### create a service
 
