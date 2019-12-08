@@ -190,7 +190,7 @@ Then get into ora01, with ip addr see if the new interface is added and what is 
 
 ```
 BOOTPROTO=none
-DEFROUTE=yes
+DEFROUTE=no
 DEVICE=enp8s0
 GATEWAY=10.0.0.1
 IPADDR=10.0.0.10
