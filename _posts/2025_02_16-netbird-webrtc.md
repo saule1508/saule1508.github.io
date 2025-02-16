@@ -4,20 +4,26 @@ title: Netbird troubleshooting
 published: false
 ---
 
-How to troubleshoot P2P direct connection with Netbird
+How to troubleshoot P2P connections with Netbird
 <!--more-->
 
 ## Intro
 
-Netbird is a very cool project that makes it easy to set-up a private network. I was lucky enough to spend time learning it because my company is evaluating using Netbird instead of Fortinet as a VPN solution.
+Netbird is a very cool project that makes it easy to set-up a private network. I am lucky enough to spend time learning it because my company is evaluating using Netbird instead of Fortinet as a VPN solution.
 
-Netbird is open source friendly and they provide a set-up script that let you set-up netbird on a self-hosted infrastructure, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
+Netbird is open source friendly and they provide a set-up script that lets you set-up netbird on a self-hosted infrastructure very quickly, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
 
-At the core of a Netbird network is Wireguard: Netbird uses wireguard tunnel to have peers in the network communicating to each other. Another key technology used by Netbird to make the peer to peer connection possible is Webrtc: with webrtc two peers that want to communicate with each other will use a out-of-band communication mechanism (i.e. not part of the webrtc protocol) to exchange connection candidates (basically pairs of ip address and udp port). THis exchange goes on until a valid candidate pairs is found. If no direct connection channel between the two peers is found then webrtc falls back to turn (an external, publicly available, server that will relay the traffic between the two peers).
+At the core of a Netbird network is Wireguard: Netbird uses wireguard tunnel to have peers in the network communicating to each other. Another key technology used by Netbird to make the peer to peer connection possible is Webrtc. Webrtc will enable two peers (each peer being potentially behind nat devices and firewall) to establish a direct connection, and in case it is impossible (unfriendly nat, that cannot be traversed) webrtc will automatically falls back to a relay mechanism (using an external server, called a TURN server).
 
-Because direct peer to peer connections are better than relayed connections, my goal was to make sure the routing peers inside our private cloud would be reachable directly without relay. But for some reason it was not working. To troubleshoot the issue I decided to study first the technology, in particular webrtc because it is at the heart of the connection issue. This was a great learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. And since Netbird is written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (webrtc is originally a javascript in the browser framework). And after learning webrtc I had to learn how the linux kernel is routing packets based on policy based routing and what is the relation with filtering packets (with nft)... all those thinks are done by Netbird. This piece of software looks really amazing and by understanding it one can learn a lot about golang and networking
+Because direct peer to peer connections are better than relayed connections, my goal was to make sure the routing peers inside our private cloud would be reachable directly without relay. But for some reason it was not working. To troubleshoot the issue, and before asking help to the internal network experts, I decided to study the technology, in particular webrtc because it is at the heart of the connection issue. This turned out to be a super learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. And since Netbird is written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (webrtc is originally a javascript in the browser framework). Once I knew enough about webrtc and PION to do my own small test lab, I could see webrtc was not the issue and there was something else in conjunction with netbird causing the issue. Guided by a network export, I had to understand in a more detailed way how the linux kernel is routing packets and how netbird interact with that...  This piece of software looks really amazing and by understanding it one can learn a lot about golang and networking. Not to mention that this knowledge is very useful in order to maintain a self-hosted netbird.
 
 ## How to learn and play with webrtc
+
+
+with webrtc two peers that want to communicate with each other will use a out-of-band communication mechanism (i.e. not part of the webrtc protocol) to exchange connection candidates (basically pairs of ip address and udp port). This out of band mechanism is usually a signaling server. So to test webrtc you first need to create a signaling server. Developing a signaling server in golang for a basic testing peer to peer setup is not very difficult, there are plenty of resources. The more sensible choice would be to do a websocket but to keep it to the simplest possible I did it with plain http (and with the help of ChatGPT). Even though the code is not very long nor involved, there are valuable techniques in golang that I learned. Especially the way a kind of long polling is made, meaning a peer will send a get request to the signaling web server, and the signaling server will "block" the request, pulling messages from a channel and sending them to the client as they arrive, without stopping the request. This is very golang idiomatic.
+
+Note: I will certainly re-implement the signaling part using websocket, as it is probably trivial to do, but for now this is largely sufficient for my setup.
+
 
 There are a lot of good resources on webrtc, here are my favorite
 
