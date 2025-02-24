@@ -9,36 +9,50 @@ How to troubleshoot P2P connections with Netbird
 
 ## Intro
 
-Netbird is a very cool project that makes it easy to set-up a private network. I am lucky enough to spend time learning it because my company is evaluating using Netbird instead of Fortinet as a VPN solution.
+Netbird is a very cool project that makes it easy to set-up a private network. I am lucky enough to spend time learning it because my company is evaluating using Netbird as a VPN solution.
 
 Netbird is open source friendly and they provide a set-up script that lets you set-up netbird on a self-hosted infrastructure very quickly, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
 
-At the core of a Netbird network is Wireguard: Netbird uses wireguard tunnel to have peers in the network communicating to each other. Another key technology used by Netbird to make the peer to peer connection possible is Webrtc. Webrtc will enable two peers (each peer being potentially behind nat devices and firewall) to establish a direct connection, and in case it is impossible (unfriendly nat, that cannot be traversed) webrtc will automatically falls back to a relay mechanism (using an external server, called a TURN server).
+At the core of a Netbird VPN network is Wireguard: peers are connected to each other via a wireguard tunnel. Another key technology that makes peer to peer connections possible is Webrtc. With Webrtc, two peers (each one being potentially behind nat devices and firewall) can establish a direct connection, and in case it is impossible (because of the presence of unfriendly nat, that cannot be traversed) webrtc will automatically falls back to a relay mechanism (using an external server, called a TURN server).
 
-Because direct peer to peer connections are better than relayed connections, my goal was to make sure the routing peers inside our private cloud would be reachable directly without relay. But for some reason it was not working. To troubleshoot the issue, and before asking help to the internal network experts, I decided to study the technology, in particular webrtc because it is at the heart of the connection issue. This turned out to be a super learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. And since Netbird is written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (webrtc is originally a javascript in the browser framework). Once I knew enough about webrtc and PION to do my own small test lab, I could see webrtc was not the issue and there was something else in conjunction with netbird causing the issue. Guided by a network export, I had to understand in a more detailed way how the linux kernel is routing packets and how netbird interact with that...  This piece of software looks really amazing and by understanding it one can learn a lot about golang and networking. Not to mention that this knowledge is very useful in order to maintain a self-hosted netbird.
+When a peer join the Netbird VPN, the tool will use webrtc to connect it to the other peers. If a direct connection is not possible it falls back to a relayed connection. Sometimes you want to make sure a direct connection is possible, to avoid the overhead of the rellay. For some reason, in my infra, it was not working. To troubleshoot the issue, and before asking help to the internal network experts, I decided to study the technology, in particular webrtc because it is at the heart of the connection issue. This turned out to be a super learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. And since Netbird is written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (webrtc is originally a javascript in the browser framework). 
+
+Once I knew enough about webrtc and PION to do my own small test lab, I could see webrtc was not the issue and there was something else in conjunction with netbird causing the issue. Guided by a network export, I had to understand in a more detailed way how packets are routed in the  linux kernel and how netbird interact with that...but this is for another post maybe.
 
 ## How to learn and play with webrtc
 
+With webrtc two peers that want to communicate with each other will use a out-of-band communication mechanism (i.e. not part of the webrtc protocol) to exchange connection candidates. Candidates are basically pairs of ip address and udp port. This out- of-band mechanism is a signaling server. 
 
-with webrtc two peers that want to communicate with each other will use a out-of-band communication mechanism (i.e. not part of the webrtc protocol) to exchange connection candidates (basically pairs of ip address and udp port). This out of band mechanism is usually a signaling server. So to test webrtc you first need to create a signaling server. Developing a signaling server in golang for a basic testing peer to peer setup is not very difficult, there are plenty of resources. The more sensible choice would be to do a websocket but to keep it to the simplest possible I did it with plain http (and with the help of ChatGPT). Even though the code is not very long nor involved, there are valuable techniques in golang that I learned. Especially the way a kind of long polling is made, meaning a peer will send a get request to the signaling web server, and the signaling server will "block" the request, pulling messages from a channel and sending them to the client as they arrive, without stopping the request. This is very golang idiomatic.
+So the first thing is to create a signaling server. In golang, to have a basic signaling server, is not very difficult. There are plenty of resources on internet to show you. The more sensible choice would be to do a websocket but to keep it to the simplest possible I did it with plain http (with the help of chatgpt !). Even though the code is not very long nor involved, there are valuable techniques in golang that I learned. Especially how, using a channel, we can implement a  long polling http request.  A peer will send a get request to the signaling web server, and the signaling server will "block" the request, pulling messages from a channel and sending them to the client as they arrive, without stopping the request. This is very golang idiomatic.
 
 Note: I will certainly re-implement the signaling part using websocket, as it is probably trivial to do, but for now this is largely sufficient for my setup.
 
 
-There are a lot of good resources on webrtc, here are my favorite
+There are a lot of good resources on webrtc, here are my some of my favorites
 
+* https://github.com/pion/webrtc (this is the library used by netbird), look at the samples. 
+* https://www.youtube.com/watch?v=FExZvpVvYxA&amp;t=1282s (very long but complete explanation of NAT). 
+* https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API 
+
+For testing and learning webrtc I developped two small golang program (using PION), one for the signaling part and one to run on each peer. The signaling server must be started before, it starts a http server that must be reachable by the two peers.
+
+https://github.com/saule1508/webrtc-lab
+
+### Signaling server
 
 
 ```
-dnf remove docker
-dnf install podman podman-tools
+cd signal
+make build
+./bin/signaling-server -port 8080
 ```
+or you can just
 
 ```bash
-minikube start --driver podman --cpus 8 --memory 8G --disk-size 10G
+go run signaling-server
 ```
 
-Install grafana loki in single binary mode (only one replica)
+  Install grafana loki in single binary mode (only one replica)
 
 ```bash
 helm repo add grafana https://grafana.github.io/helm-charts
