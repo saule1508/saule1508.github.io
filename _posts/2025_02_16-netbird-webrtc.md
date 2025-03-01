@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Netbird troubleshooting
-published: false
+published: true
 ---
 
 How to troubleshoot P2P connections with Netbird
@@ -9,21 +9,21 @@ How to troubleshoot P2P connections with Netbird
 
 ## Intro
 
-Netbird is a very cool project that makes it easy to set-up a private network. I am lucky enough to spend time learning it because my company is evaluating using Netbird as a VPN solution.
+Netbird is a very cool project that makes it easy to set-up a private network. Netbird is open source friendly and they provide a set-up script that lets you set-up netbird on a self-hosted infrastructure very quickly, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
 
-Netbird is open source friendly and they provide a set-up script that lets you set-up netbird on a self-hosted infrastructure very quickly, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
+At the core of a Netbird VPN network is Wireguard: peers are connected to each other via a wireguard tunnel. To understand wireguard quicky, take the tour (https://www.wireguard.com/#conceptual-overview). Another key technology that makes peer to peer connections possible is Webrtc. With Webrtc, two peers (each one being potentially behind nat devices and firewall) will manage to establish a direct connection, either directly or - in case it is impossible because of the presence of unfriendly NAT devices -  via a relay mechanism (using an external server, called a TURN server).
 
-At the core of a Netbird VPN network is Wireguard: peers are connected to each other via a wireguard tunnel. Another key technology that makes peer to peer connections possible is Webrtc. With Webrtc, two peers (each one being potentially behind nat devices and firewall) can establish a direct connection, and in case it is impossible (because of the presence of unfriendly nat, that cannot be traversed) webrtc will automatically falls back to a relay mechanism (using an external server, called a TURN server).
+When a peer join the Netbird VPN, the Netbird client uses webrtc to connect it to the other peers. It will then show you other peers and how they are connected : via a direct P2P connection of via a relyed connection. Sometimes you want to make sure a direct connection is possible, to avoid the overhead of the relay.
 
-When a peer join the Netbird VPN, the tool will use webrtc to connect it to the other peers. If a direct connection is not possible it falls back to a relayed connection. Sometimes you want to make sure a direct connection is possible, to avoid the overhead of the rellay. For some reason, in my infra, it was not working. To troubleshoot the issue, and before asking help to the internal network experts, I decided to study the technology, in particular webrtc because it is at the heart of the connection issue. This turned out to be a super learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. And since Netbird is written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (webrtc is originally a javascript in the browser framework). 
+Im my infra I was experiencing  case where direct P2P connections were not possible, so that all connections were relayed. To troubleshoot the issue, and before asking help to the internal network experts, I decided to study the technology, in particular webrtc because it is at the heart of the connection issue. This turned out to be a super learning opportunity, because webrtc involves STUN/TURN (traversal utilities for NAT) which in turns requires a good understanding of NAT. Netbird being written in Go, they use a popular library called PION. PION is an implementation in Go of the webrtc protocol (which is originally a javascript in the browser framework). 
 
-Once I knew enough about webrtc and PION to do my own small test lab, I could see webrtc was not the issue and there was something else in conjunction with netbird causing the issue. Guided by a network export, I had to understand in a more detailed way how packets are routed in the  linux kernel and how netbird interact with that...but this is for another post maybe.
+After listening to a lot of videos on youtube, experimenting with webrtc in javascript, looking at the examples in the PION github project, I decided to write my own program in Golang. This was easier than I expected, it gave me a lot of insight on webrtc and let me acquire a few golang patterns in the process.
 
 ## How to learn and play with webrtc
 
 With webrtc two peers that want to communicate with each other will use a out-of-band communication mechanism (i.e. not part of the webrtc protocol) to exchange connection candidates. Candidates are basically pairs of ip address and udp port. This out- of-band mechanism is a signaling server. 
 
-So the first thing is to create a signaling server. In golang, to have a basic signaling server, is not very difficult. There are plenty of resources on internet to show you. The more sensible choice would be to do a websocket but to keep it to the simplest possible I did it with plain http (with the help of chatgpt !). Even though the code is not very long nor involved, there are valuable techniques in golang that I learned. Especially how, using a channel, we can implement a  long polling http request.  A peer will send a get request to the signaling web server, and the signaling server will "block" the request, pulling messages from a channel and sending them to the client as they arrive, without stopping the request. This is very golang idiomatic.
+So the first thing is to create a signaling server. In golang, to have a basic signaling server, is not very difficult. There are plenty of resources on internet to show you. The more sensible choice is to implement the signal server with websocket but to keep it simple I did it with plain http (with the help of chatgpt !). Even though the code is not long nor involved, there are valuable techniques in golang that I learned. Especially how we can implement a  long polling http request, using a channel to enqueue/dequeue work. A peer will send a get request to the signaling web server, and the signaling server will "block" the request, pulling messages from a channel and sending them to the client as they arrive, without stopping the request. This is very golang idiomatic.
 
 Note: I will certainly re-implement the signaling part using websocket, as it is probably trivial to do, but for now this is largely sufficient for my setup.
 
@@ -52,178 +52,37 @@ or you can just
 go run signaling-server
 ```
 
-  Install grafana loki in single binary mode (only one replica)
-
-```bash
-helm repo add grafana https://grafana.github.io/helm-charts
-helm update
-```
-
-to see the available charts
-```bash
-helm search repo
-```
-
-create file loki-single-values.yaml
-
-```yaml
-loki:
-  commonConfig:
-    replication_factor: 1
-  storage:
-    type: 'filesystem'
-singleBinary:
-  replicas: 1
-```
-
-create a namespace grafana: we will install all our pods/deployment in this namespace
-
-```ssh
-kubectl create namespace grafana
-helm install loki --values loki-single-values.yaml --namespace=grafana grafana/loki
-```
-
-After a few minutes all the pods should be created
-```ssh
-kubectl get pods -n grafana
-# you can get inside a pod to see what it looks like (config for example)
-kubectl -n grafana exec -ti loki-0 /bin/sh
-# to see the logs
-kubectl -n grafana logs loki-0 -f
-# decribe loki pod
-kubectl describe pod/loki-0 -n grafana
-```
-
-Now we need to deploy grafana in the same namespace
+### webrtc client : answerer
 
 ```
-helm install --namespace=grafana --set persistence.enabled=true grafana grafana/grafana
+cd client
+go mod install # needed to install pion library, you migh need to change the go version in go.mod to match your system
+
+```
+go run webrtc_client.go -signaling-addr http://127.0.0.1:8080 -role answerer -with-turn=false
 ```
 
-```text
-[pierre@fedora single]$ helm install --namespace=grafana --set persistence.enabled=true grafana grafana/grafana
-NAME: grafana
-LAST DEPLOYED: Fri Jul 21 19:12:06 2023
-NAMESPACE: grafana
-STATUS: deployed
-REVISION: 1
-NOTES:
-1. Get your 'admin' user password by running:
-
-   kubectl get secret --namespace grafana grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
 
 
-2. The Grafana server can be accessed via port 80 on the following DNS name from within your cluster:
+On the signaling side, you should see the answerer registrated
 
-   grafana.grafana.svc.cluster.local
-
-   Get the Grafana URL to visit by running these commands in the same shell:
-     export POD_NAME=$(kubectl get pods --namespace grafana -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}")
-     kubectl --namespace grafana port-forward $POD_NAME 3000
-
-3. Login with the password from step 1 and the username: admin
+```
+time=2025-03-01T10:38:33.091+11:00 level=INFO source=/home/pierre/webrtc-lab/signal/signaling_server.go:34 msg="Starting signaling server" port=8080
+time=2025-03-01T10:44:26.699+11:00 level=INFO source=/home/pierre/webrtc-lab/signal/signaling_server.go:66 msg="receive registered" id=answer-peer-1
 ```
 
-Follow the instructions above to log in to grafana, in my case the pod name is grafana-bbc7b96c5-clwd4, so I run
+ 
+ ### webrtc client : offerer
 
-```ssh
-kubectl --namespace grafana port-forward grafana-bbc7b96c5-clwd4 3000
-```
+ ```
+ cd client
+ o run webrtc_client.go -signaling-addr http://127.0.0.1:8080 -role offerer -with-turn=false
+ ```
 
-and then I can connect on my laptop on http://localhost:3000 with user admin
+ On the signaling side, you should see the offerer registrated, and then on both client you can see the local and remote ICE candiate and the offer / answer exchange and finally the datachannel created and used
 
-Create a Loki datasource : go to Home->Connections->Add new Connection. In the URL specify http://loki:3100. Add a Custom HTTP Header: X-Scope-OrgId = mytenant
+## Take away
 
+By implementing and running wertc on the server you can troubleshoot the ICE candidate exchange and understand how the exchange of information over signal is performed.
 
-Let us add a pod with promtail in then cluster. For that we must build an image and upload it on the minikube repository
-
-```bash
-minikube ssh
-```
-inside the minikube we can build the image based on this Dockerfile. Note that in order to have systemd in the container we use ubi8-init
-
-```text
-FROM registry.access.redhat.com/ubi8-init
-RUN dnf install -y https://github.com/grafana/loki/releases/download/v2.8.2/promtail-2.8.2.x86_64.rpm
-RUN dnf install -y https://github.com/grafana/loki/releases/download/v2.8.2/logcli-2.8.2.x86_64.rpm
-```
-
-```bash
-docker build -t mypromtail .
-```
-
-Prepare a persistent volume for the promtail container (so that we can safe our config)
-
-```bash
-minikube ssh
-mkdir /data/pv001
-exit
-```
-
-create a file pv001.yaml
-
-```yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pv001
-  labels:
-    type: local
-spec:
-  storageClassName: manual
-  accessModes:
-    - ReadWriteOnce
-  capacity:
-    storage: 1M
-  hostPath:
-    path: "/data/pv001"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pv001-claim
-spec:
-  storageClassName: manual
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1M
-```
-
-```bash
-kubectl apply -n grafana -f pv001.yaml
-```
-
-create a pod containing promtail. The privileged flag is needed for systemd
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: promtail
-  labels:
-    app: promtail
-spec:
-  volumes:
-    - name: promtail-data
-      persistentVolumeClaim:
-        claimName: pv001-claim
-  containers:
-    - name: promtail
-      imagePullPolicy: Never
-      image: mypromtail
-      securityContext:
-        privileged: true
-      volumeMounts:
-        - mountPath: /config
-          name: promtail-data
-```
-
-```bash
-kubectl apply -f promtail.yaml -n grafana
-```
-
-Now we can get into the promtail pod, edit the promtail config, restart promtail and check the data via grafana
-
-
+In my infra, I could establish a P2P connection without the help of a turn server, so I knew the issue was not related to webrct. At the end it turned out to be a routing issue in the linux kernel, which enabled me to learn about policy based routing in linux. But this is another story (check here for rule based routing with wireguard https://www.wireguard.com/netns/)
