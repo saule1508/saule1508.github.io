@@ -4,65 +4,86 @@ title: Netbird scaling
 published: false
 ---
 
-Issuing running Netbird on a self-hosted with very large of networks and policies
+Running Netbird on self-hosted with very large mumber of groups, networks and policies
 
-I had been using NetBird for months, with a limited group of users, and it was performing very well. But when we started to migrate away from Fortinet into Netbird, as the load increased, we hit some scalability issues related to our setup.
+I had been using NetBird for months, with a limited group of users, and it was performing very well. But when we started to migrate away from Fortinet into Netbird, as the load increased, we hit some scalability issues related to our setup which is very large and probably very atypical compared to normal netbird user.
 <!--more-->
 
 ## Intro
 
 Netbird is a very cool project that makes it easy to set-up a private network. Netbird is open source friendly and they provide a set-up script that lets you set-up netbird on a self-hosted infrastructure very quickly, so that you can play with it. Later you can decide to use the cloud version or continue using self-hosted but with support and enterprise features. Or simply continue with the free self-hosted solution.
 
-Althought netbird was working very well with a limited group of users, once we started to migrate users from Fortinet to Netbird we hit some performance issue, namely the cpu usage on the mgmt server went out of control. Thanks to a golang CPU profile, it appeared that the CPU was burned by the OS version and NB version posture checks, so that disabling those posture checks and at the same time increasing the number of CPU gave me time to get more deeply in the issue without stopping the migration.
+Althought netbird was working very well with a limited group of users, once we started to migrate users from Fortinet to Netbird we hit some performance issues, which appeared to be link with the very large number of networks and groups we are managing.
 
 ## The problem
 
+We are using Netbird to replace Fortinet. Fortinet was plagued with a constant stream of vulnerability. The director of infra, and the network guys, had all heard about wireguard but nobody had the time to look into it, so I seized this opportunity to do something cool with my team.
+
+The company is operating an internal cloud, fully automated, in which each "customer" (internal customer) is fully segreggated from the others. We call those "customers" tenant, we can think of it as a business-unit in the company. Furthermore each tenant has access to 3 platforms, totally segregated as well : production, pre-production and development. So each tenant is fully isolated from the others and is offered 3 plateforms also seggregated, this is a core principle of the internal cloud. A user can have access to only to his tenant (sometimes multiple tenants) and not necessarily all plateform (sometimes only dev, sometimes prod, ..)
+
+With Fortinet each user had access to the subnets of his tenant(s), on the 3 platforms. So we wanted to do the same with wireguard and it turned out netbird was a perfect fit for that. We netbird we can:
+
+* group the resources of a tenant in a network
+* create a corresponding group of peers that have access to those resources
+* create a policy to give access to those resources to member of this group
+* and because we wanted to restrict to production to "certified" device, we also added a posture check for each production subnets. This was not possible with Fortinet and is a significant improvement of the new solution.
+
+But as a result we end-up with a staggering amount of groups, networks and policies, for which the implementation of part of the code in netbird was not adapted. We have namely 160 tenants (and it is increasing as more and more of the internal customers want to move away from public cloud), which means 480 networks (one per platform) and 480 groups and policies. 
+
+This was challenging for netbird, which was probably not designed at the begining for that kind of very large set-up (at the begining of the project, the database was just a json file !)
+
+
 ### First issue: login expiration job kicking out users when they are loggin into.
 
-With 70 concurrent users connected to Netbird, A lot of users were experiencing difficulties to log in to Netbird, a general pattern reported by users was
+Early in the migration, when we had 70 concurrent peers using the VPN, some users were experiencing difficulties to log in to Netbird, a general pattern reported was
 
 * login to Netbird -> SSO login -> Success
 * immediately after: message received "Your login has expired"
 * login again to Netbird -> SSO login -> Success
 * immediately after: "Your login has expired"
 
-this was always during peak hour, it could happen one, twice or three times in a row. At first I shrugged off the issue, because it never happened to me (because I was outside peak hour, being in a different timezone than most of the users), but at the end it happened once to me and - after much debugging and code inspection - I could link the issue to the expiration job which was incredibly aggressive and contained a flaw. The job fetch all the peers from the database, more than 1000, iterate on them to check the last_login and if older than the setting expires them. The flaw here is that it does that even for peer that are already expired, so on a buzy system, the grpc login request is racing agains the expiry job. Disabling the expiration job (and running it manually outside business hours) made a big difference, after that I improved the code and will make a github issue
+this was always during peak hour, it could happen one, twice or three times in a row. At first I shrugged off the issue, because it never happened to me (because I was outside peak hour, being in a different timezone than most of the users), but at the end it happened once to me and - after much debugging and code inspection - I could link the issue to the expiration job which is incredibly aggressive in the frequency. The job expires all the peers from the database (based on the setting) and do that repeatedly, even for peers that are already expired. In my case this expiration job was racing with other, unrelated, grpc login request. Disabling the expiration job (and running it manually outside business hours) made a big difference, after that I improved the code in my fork but will make a github issue. I think the best would be to have this job scheduled with a low frequency (to batch expiration) by a central schedule and keep it out of the requests.
+
 
 ### Second issue: load increasing exponentially with peers
 
-Another concerning issue was the CPU load increasing, which was correlated with a high metric for the login and the UpadeAccountPeers function. The UpdateAccountPeer is a function triggered by concurrent grpc requests (peer login IN, peer login Out, expiry, API calls,..) which recalculates the network map of all peers that are connected, so that Netbird will send the updated network map via the grpc channel specific to each user. 
+A worrying issue was the CPU load increasing, which was correlated with a high metric for the login and the UpadeAccountPeers function. 
 
-UpdateAccountPeer is protected against concurrent execution but the throttling is not very well implemented and the function can be fired in very rapid succession.
+The UpdateAccountPeer is a function triggered by concurrent grpc requests (peer login IN, peer login Out, expiry, API calls,..) which recalculates the network map of all peers that are connected, so that Netbird will send the updated network map via the grpc channel specific to each user. The NetBird control plane is basically doing that continuously, either because a peer joins the network, or leaves it, .. because all other peers might need the information. 
+
+UpdateAccountPeer is protected against concurrent execution. There is also a throttling mechanism, but it does not prevent executions in rapid succession, when the system is very buzy. I think the buffering mechanism could be improved here.
 
 ![netbird performance issue]({{ site.url }}/images/nbperf_sep01.png)
 
-The CPU profile showed that all the CPU was burned by the OS version check and the NB version check, so an immediate relief in order to not stop the migration was to disable those two checks which we did not really need.
+The CPU profile showed that all the CPU was burned by the OS version check and the NB version check, so an immediate relief in order to not stop the migration was to disable those two checks. It made a huge difference.
 
 ![netbird CPU profile]({{ site.url }}/images/nbperf_cpuprofile_sep.png)
 
-After having changed that and continuing the migration, we reached 400 concurrent peers and the load started again to become a worry. At that time I kept taking profiles, and all of them were pointing to the Network Map Calculation, the function GetPeerConnectionResources and more precisely the GetAllPeersFromGroup which happened to be very expensive in our set-up.
+After having changed that and continuing the migration, we reached 400 concurrent peers and the load started again to become a worry. At that time I kept taking profiles, and all of them were pointing to the UpdateAccountPeers, specifically in the Peer Network Map Calculation, the function to get - for each peer - the list of peers it is connected to. This function is called GetPeerConnectionResources, it was killing us because of our large number of policies.
 
 UpdateAccountPeers -> iterate over all connected peers (10 by 10). For each peer, it calls GetPeerNetworkMap which is basically the info that the control plane sends to each peer in order for netbird on the client peer to configure the wireguard interface and the firewall rules.
 
 In GetPeerNetworkMap the bulk of the work is the GetPeerConnectionResources [GetPeerConnectionResources](
 https://github.com/netbirdio/netbird/blob/96f71ff1e15b50eff87a7052432537dad2718b20/management/server/types/account.go#L274) which returns the list of peers and the firewall rules relevant to that peer.
 
-But in our Netbird set-up, we have thousands of peers (our users) that connects to routing peers and only to routing peers, we are basically replacing Fortinet. So that in this set-up almost all our peers don't need to receive the list of peers to connect (other than for the routing peers and dns, ..) and so this calculation can be completly skipped !!
+But in our Netbird set-up, we have thousands of peers (our users) that connects to routing peers and only to routing peers (we are basically replacing Fortinet, to give access to our users to our private cloud). So that in this set-up almost all our peers don't need to receive the list of peers to connect (other than for the routing peers and dns, ..) and so this calculation can be completly skipped !!
 
-And secondly, if the GetPeerConnectionResources is so expensive for us, it is because we have a staggering amount of network and groups (one group per network) and policies (one policy per network), and this number of policies is the key to the performance issue we have.
-
-The high number of groups is due to the design of the internal cloud in the company, we have "tenants" which are kind of business units, and each tenant is isolated from each other. The seggregation at network level is a key principle. And on top of that for each tenant there are 3 plateforms (production, preproduction, development), so each combination tenant/plateforme is a group. Idea is to segregate completly tenants and plateforms, a user's peer can have access to only to his tenant and not necessarily all plateform (sometimes only dev, sometimes prod, ..) (edited) 
-
-Our ACL model fitted nicely with the one of Netbird and this was the main reason why Netbird was such a good match, it was very easy to map that model to the ACL of netbird (it is almost a one to one match with netbird). But of course I did not predict that kind of performance issue...
+And secondly, if the GetPeerConnectionResources is so expensive for us, it is because by iterating on all policies, and then on all peers in the groups related to this policy, it is doing over and over the same posture checks.
 
 So looking at what the GetPeerConnectionResources is doing:
 
 - Loop on each policy, this is the huge cost for use because there are 480
 - For each policy rule, get the source groups and the posture checks attached to the policy, and then iterate on each peer in the source to execute the posture checks. This returns a boolean indicating if the peer (the one we are computing the network map) is in the source groups or not. If it is not in the source groups and also not in the destination, then we have computed all the posture checks for nothing because the policy is not relevant to this peer. Note that in this evaluation of the posture checks the expired peers (which are not connected) are not excluded. That's why I could see in the logs the same IOS peer repeatedly logging an error about an unsupported OS !! But this IOS peer did not connect to the network since 2 months.
 
-This evaluation of the posture checks, even though the only one left was the process check (which is very efficient), was a huge hotspot for us. Especially the logging inside this hotstop, even when running in Info mode the Debug log were causing huge cpu cost.
+This evaluation of the posture checks, even though the only one left was the process check (which is very efficient), was a huge hotspot for us. Especially the logging inside this hotspot, even when running in Info mode the Debug log were causing huge cpu cost.
 
-To solve this issue with a very low risk change (because functionally nothing is changed), I first evaluate if the rule is relevant to the peer or not, by looking if this peer is in any source or destination group. If not, and if it is not a routing peer, this rule is not relevant for the peer and all the posture checks are not needed
+The explosion comes from:
+- update account peers
+- iterate on all connected peers, 10 by 10. Let say 500 connected peers
+- each iterate on all policy rules (480)
+- each policy rule iterates on all peers related to the policy (even the expired) and - for productio network - execute the posture checks.
+
+To solve this issue with a very low risk change (because functionally nothing is changed), I first evaluate if the rule is relevant to the peer or not. If not I don't need to iterate on the peers inside the rules and to evaluate the posture checks. In the code below, the boolean peerInSources and peerInDestination - which are cheap to compute - can avoid in most of the case the heavy computation with posture checks.
 
 ```
 // GetPeerConnectionResources for a given peer
@@ -140,9 +161,9 @@ func (a *Account) GetPeerConnectionResources(ctx context.Context, peer *nbpeer.P
 
 ```
 
-I believe this code optimization, which is behing a feature flag, could be incorporated in the upstream project, because it will make sense of all set-up where the number of policies is big.
+I believe this code optimization, which is behing a feature flag, could be incorporated in the upstream project, because it will make sense of all set-ups where the number of policies is big.
 
-Another massive optimization, but this one is probably very specific to the use case of using netbird with peer to routing pers connection only (as opposed to user peers to user peers). The optimization here is to decide upfront, before generating the ACL peers list and firewall rule, if it is needed. Because if the peer is not in any destination and not in any sources (for the sources I am not sure, I believe this condition is even not necessary), then the acl Peers list and the firewall rules are always empty
+Another massive optimization, but this one is probably very specific to the use case of using netbird with peer to routing pers connection only (as opposed to user peers to user peers), is to decide upfront, before generating the ACL peers list and firewall rule, if it is at all needed. Because if the peer is not in any destination and not in any sources, then the acl Peers list and the firewall rules are always empty and we don't even need to call the function.
 
 ```
 // In the PeerNetworkMap generation process, we need to get the aclPeers and firewall rules
@@ -226,6 +247,11 @@ func isPeerRouter(peer *nbpeer.Peer, routers map[string]map[string]*routerTypes.
 	return false
 }
 ```
+
+Related to the posture check, my first attempt to solve the issue was to maintain a global cache of peerID+checkID with a small TTL. But then the next cpu profile showed that the bottlenect had become the mutex to read and update the cache. So it showed that more than the posture check it was the insane amount of time it is called that was an issue.
+
+
+
 
 ## Conclusion
 
